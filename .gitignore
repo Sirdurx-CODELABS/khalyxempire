@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+*.log
+.DS_Store
+uploads
+.mongo-dev
+.mongo-catalog
+.mongo-fresh
+.vite
+coverage
+*.local

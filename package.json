@@ -1,0 +1,27 @@
+{
+  "name": "khalyx-empire",
+  "private": true,
+  "workspaces": [
+    "server",
+    "apps/storefront",
+    "apps/admin",
+    "apps/erp",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web,admin,erp -c gold,cyan,magenta,green \"npm run dev -w @khalyx/server\" \"npm run dev -w @khalyx/storefront\" \"npm run dev -w @khalyx/admin\" \"npm run dev -w @khalyx/erp\"",
+    "dev:server": "npm run dev -w @khalyx/server",
+    "dev:storefront": "npm run dev -w @khalyx/storefront",
+    "dev:admin": "npm run dev -w @khalyx/admin",
+    "dev:erp": "npm run dev -w @khalyx/erp",
+    "electron:erp": "npm run electron -w @khalyx/erp",
+    "seed": "npm run seed -w @khalyx/server",
+    "start": "npm run start -w @khalyx/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

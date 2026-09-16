@@ -1,0 +1,13 @@
+import mongoose from 'mongoose';
+
+const clockEntrySchema = new mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    clockIn: { type: Date, required: true },
+    clockOut: Date,
+    location: { type: String, default: 'store' }
+  },
+  { timestamps: true }
+);
+
+export const ClockEntry = mongoose.model('ClockEntry', clockEntrySchema);
