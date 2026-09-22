@@ -47,7 +47,9 @@ export function publicBatch(batch, { expand = false } = {}) {
     notes: batch.notes || '',
     itemCount: items.length,
     stickerCount: items.reduce((sum, item) => sum + Math.max(1, Number(item.copies) || 1), 0),
-    createdAt: batch.createdAt,
+    labelSize: batch.labelSize || '50x30',
+    printedAt: batch.printedAt,
+    purchaseOrder: batch.purchaseOrder,
     createdBy: batch.createdBy?.name || batch.createdBy,
     items,
     labels: expand ? expandStickers(items) : undefined
@@ -69,13 +71,15 @@ export async function itemsFromSelection(selection = []) {
   return items;
 }
 
-export async function createLabelBatch({ name, notes, items, createdBy }) {
+export async function createLabelBatch({ name, notes, items, createdBy, purchaseOrder, labelSize }) {
   const batchName = String(name || '').trim() || `Labels ${new Date().toLocaleDateString('en-NG')}`;
   if (!items?.length) throw new HttpError(400, 'Choose at least one product variant');
   const batch = await LabelBatch.create({
     name: batchName,
     notes: notes || '',
     createdBy,
+    purchaseOrder,
+    labelSize: labelSize || '50x30',
     items
   });
   return batch;

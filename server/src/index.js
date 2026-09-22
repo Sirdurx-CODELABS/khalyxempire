@@ -42,6 +42,14 @@ app.use(
 app.use(cookieParser());
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
+// Render / uptime probes often hit HEAD|GET /
+app.get('/', (_req, res) => {
+  res.json({ ok: true, service: 'khalyx-empire-api', health: '/api/health' });
+});
+app.head('/', (_req, res) => {
+  res.status(200).end();
+});
+
 app.use('/api', api);
 app.use(notFound);
 app.use(errorHandler);

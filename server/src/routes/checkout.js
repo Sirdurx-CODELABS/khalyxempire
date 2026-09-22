@@ -4,14 +4,14 @@ import { HttpError } from '../middleware/error.js';
 import { getCartDoc } from '../services/cart.js';
 import { createCheckout, publicOrder } from '../services/orders.js';
 import { applyCoupon, totals } from '../services/pricing.js';
-import { availableProviders } from '../services/payment/index.js';
+import { paymentOptions } from '../services/payment/index.js';
 
 const router = Router();
 
 router.use(optionalAuth);
 
 router.get('/options', async (_req, res) => {
-  res.json({ providers: availableProviders() });
+  res.json(paymentOptions());
 });
 
 router.post('/preview', async (req, res) => {

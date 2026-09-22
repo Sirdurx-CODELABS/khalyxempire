@@ -19,12 +19,20 @@ const purchaseOrderSchema = new mongoose.Schema(
     supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
     status: {
       type: String,
-      enum: ['draft', 'ordered', 'partial', 'received', 'cancelled'],
+      enum: ['draft', 'sent', 'ordered', 'partial', 'received', 'closed', 'cancelled'],
       default: 'draft'
     },
     items: [poItemSchema],
+    invoiceRef: { type: String, default: '' },
     expectedAt: Date,
-    notes: { type: String, default: '' }
+    notes: { type: String, default: '' },
+    history: [
+      {
+        status: String,
+        at: { type: Date, default: Date.now },
+        note: { type: String, default: '' }
+      }
+    ]
   },
   { timestamps: true }
 );

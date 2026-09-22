@@ -11,6 +11,10 @@ import staff from './staff.js';
 import reports from './reports.js';
 import labels from './labels.js';
 import uploads from './uploads.js';
+import settings from './settings.js';
+import suppliers from './suppliers.js';
+import notifications from './notifications.js';
+import search from './search.js';
 
 const router = Router();
 router.use(...requireStaff, requireApp(APPS.ADMIN));
@@ -24,5 +28,9 @@ router.use('/staff', staff);
 router.use('/reports', reports);
 router.use('/labels', labels);
 router.use('/uploads', uploads);
+router.use('/settings', settings);
+router.use('/suppliers', suppliers);
+router.use('/notifications', notifications);
+router.use('/search', search);
 
 export default router;

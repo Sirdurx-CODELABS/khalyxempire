@@ -9,6 +9,8 @@ const couponSchema = new mongoose.Schema(
     maxUses: { type: Number, default: 0 },
     usedCount: { type: Number, default: 0 },
     expiresAt: Date,
+    categoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     isActive: { type: Boolean, default: true }
   },
   { timestamps: true }

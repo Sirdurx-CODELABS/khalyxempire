@@ -3,7 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Router } from 'express';
 import multer from 'multer';
-import { requirePermission } from '../../middleware/admin.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const uploadsDir = path.resolve(__dirname, '../../../uploads');
@@ -27,7 +26,7 @@ const upload = multer({
 });
 
 const router = Router();
-router.post('/', requirePermission('products'), upload.array('images', 8), (req, res) => {
+router.post('/', upload.array('images', 8), (req, res) => {
   const urls = (req.files || []).map((file) => `/uploads/${file.filename}`);
   res.status(201).json({ urls });
 });

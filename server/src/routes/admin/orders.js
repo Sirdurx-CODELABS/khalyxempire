@@ -3,20 +3,26 @@ import { ORDER_STATUSES } from '@khalyx/shared';
 import { Order } from '../../models/Order.js';
 import { HttpError } from '../../middleware/error.js';
 import { requirePermission } from '../../middleware/admin.js';
-import { publicOrder, setOrderStatus } from '../../services/orders.js';
+import { publicOrder, setOrderStatus, refundOrder } from '../../services/orders.js';
 import { sendCsv } from '../../utils/csv.js';
 
 const router = Router();
 router.use(requirePermission('orders'));
 
 router.get('/', async (req, res) => {
-  const { status, q, page = 1, limit = 25, from, to } = req.query;
+  const { status, q, page = 1, limit = 25, from, to, channel, payment } = req.query;
   const filter = {};
   if (status) filter.status = status;
+  if (channel) filter.channel = channel;
+  if (payment) filter['payment.provider'] = payment;
   if (from || to) {
     filter.createdAt = {};
     if (from) filter.createdAt.$gte = new Date(from);
-    if (to) filter.createdAt.$lte = new Date(to);
+    if (to) {
+      const end = new Date(to);
+      end.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = end;
+    }
   }
   if (q) {
     filter.$or = [
@@ -28,7 +34,7 @@ router.get('/', async (req, res) => {
   }
   const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
   const [orders, total] = await Promise.all([
-    Order.find(filter).populate('user', 'name email').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+    Order.find(filter).populate('user', 'name email').populate('soldBy', 'name').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
     Order.countDocuments(filter)
   ]);
   res.json({ orders: orders.map(publicOrder), total, page: Number(page), statuses: ORDER_STATUSES });
@@ -43,6 +49,10 @@ router.get('/:orderNumber', async (req, res) => {
 router.patch('/:orderNumber', async (req, res) => {
   const order = await Order.findOne({ orderNumber: req.params.orderNumber });
   if (!order) throw new HttpError(404, 'Order not found');
+  if (req.body.refund) {
+    const updated = await refundOrder(order, { amount: req.body.amount, note: req.body.note });
+    return res.json({ order: publicOrder(updated) });
+  }
   if (!ORDER_STATUSES.includes(req.body.status)) throw new HttpError(400, 'Invalid status');
   const updated = await setOrderStatus(order, req.body.status);
   res.json({ order: publicOrder(updated) });

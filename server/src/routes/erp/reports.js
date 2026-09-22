@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Order } from '../../models/Order.js';
 import { User } from '../../models/User.js';
+import { Reconciliation } from '../../models/Reconciliation.js';
 
 const router = Router();
 const COUNTED = { status: { $in: ['paid', 'processing', 'shipped', 'delivered'] } };
@@ -42,7 +43,50 @@ router.get('/reconciliation', async (req, res) => {
   }
 
   summary.pos.byStaff = Object.entries(summary.pos.byStaff).map(([name, revenue]) => ({ name, revenue }));
-  res.json({ summary });
+  const closes = await Reconciliation.find({ date: from.toISOString().slice(0, 10) }).populate('staff', 'name');
+  res.json({ summary, closes });
+});
+
+router.post('/reconciliation', async (req, res) => {
+  const from = req.body.date ? new Date(req.body.date) : new Date();
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setHours(23, 59, 59, 999);
+  const orders = await Order.find({
+    ...COUNTED,
+    channel: 'pos',
+    paidAt: { $gte: from, $lte: to }
+  });
+  const expected = { cash: 0, card: 0, transfer: 0, total: 0 };
+  for (const order of orders) {
+    const parts = order.payments?.length ? order.payments : [{ method: order.payment?.provider, amount: order.total }];
+    for (const p of parts) {
+      if (expected[p.method] != null) expected[p.method] += p.amount || 0;
+      expected.total += p.amount || 0;
+    }
+  }
+  const countedCash = Number(req.body.countedCash) || 0;
+  const countedCard = Number(req.body.countedCard) || 0;
+  const countedTransfer = Number(req.body.countedTransfer) || 0;
+  const countedTotal = countedCash + countedCard + countedTransfer;
+  const row = await Reconciliation.findOneAndUpdate(
+    { date: from.toISOString().slice(0, 10), staff: req.user._id },
+    {
+      expectedCash: expected.cash,
+      expectedCard: expected.card,
+      expectedTransfer: expected.transfer,
+      expectedTotal: expected.total,
+      countedCash,
+      countedCard,
+      countedTransfer,
+      countedTotal,
+      discrepancy: countedTotal - expected.total,
+      notes: req.body.notes || '',
+      closedAt: new Date()
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+  res.status(201).json({ reconciliation: row, expected });
 });
 
 router.get('/staff-sales', async (req, res) => {

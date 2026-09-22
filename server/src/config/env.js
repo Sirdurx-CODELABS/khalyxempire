@@ -32,5 +32,6 @@ export const env = {
   auth0ClientId: process.env.AUTH0_CLIENT_ID || '',
   auth0ClientSecret: process.env.AUTH0_CLIENT_SECRET || '',
   auth0CallbackUrl:
-    process.env.AUTH0_CALLBACK_URL || `${process.env.CLIENT_URL || 'http://localhost:5173'}/api/auth/auth0/callback`
+    process.env.AUTH0_CALLBACK_URL || `${process.env.CLIENT_URL || 'http://localhost:5173'}/api/auth/auth0/callback`,
+  apiPublicUrl: process.env.API_PUBLIC_URL || `http://localhost:${Number(process.env.PORT) || 5000}`
 };

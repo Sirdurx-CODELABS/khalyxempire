@@ -12,18 +12,32 @@ function transporter() {
   });
 }
 
+export async function sendMail(mail) {
+  const payload = { from: env.smtpFrom, ...mail };
+  const tx = transporter();
+  if (!tx) {
+    console.log('[email] SMTP not configured. Would send:\n', payload.subject, '\n', payload.text);
+    return { delivered: false };
+  }
+  await tx.sendMail(payload);
+  return { delivered: true };
+}
+
 export async function sendOrderEmail(order) {
   const to = order.guestEmail || order.user?.email;
   if (!to) return;
   const lines = order.items
     .map((i) => `${i.qty}x ${i.name} (${i.size || ''} ${i.color || ''}) — ${formatNaira(i.price * i.qty)}`)
     .join('\n');
+  const discounts = (order.discountBreakdown || [])
+    .map((row) => `${row.label}: -${formatNaira(row.amount)}`)
+    .join('\n');
   const text = `Thank you for your Khalyx Empire order ${order.orderNumber}.
 
 ${lines}
 
 Subtotal: ${formatNaira(order.subtotal)}
-Discount: ${formatNaira(order.discount)}
+${discounts || `Discount: ${formatNaira(order.discount)}`}
 Shipping: ${formatNaira(order.shippingFee)}
 Total: ${formatNaira(order.total)}
 
@@ -32,17 +46,9 @@ WhatsApp group: ${env.whatsappGroup}
 WhatsApp us: ${order.whatsappLink}
 `;
 
-  const mail = {
-    from: env.smtpFrom,
+  await sendMail({
     to,
     subject: `Khalyx Empire — order ${order.orderNumber}`,
     text
-  };
-
-  const tx = transporter();
-  if (!tx) {
-    console.log('[email] SMTP not configured. Would send:\n', mail.subject, '\n', text);
-    return;
-  }
-  await tx.sendMail(mail);
+  });
 }

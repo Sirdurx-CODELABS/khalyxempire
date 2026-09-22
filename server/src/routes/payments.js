@@ -1,42 +1,67 @@
 import { Router } from 'express';
 import { Order } from '../models/Order.js';
 import { HttpError } from '../middleware/error.js';
-import { paystackWebhookValid, verifyPaystack } from '../services/payment/paystack.js';
-import { flutterwaveWebhookValid, verifyFlutterwave } from '../services/payment/flutterwave.js';
+import { paystackConfigured, verifyPaystack } from '../services/payment/paystack.js';
+import {
+  flutterwaveConfigured,
+  verifyFlutterwave,
+  verifyFlutterwaveByReference
+} from '../services/payment/flutterwave.js';
 import { markOrderPaid, publicOrder } from '../services/orders.js';
-import { availableProviders } from '../services/payment/index.js';
+import { availableProviders, paymentOptions } from '../services/payment/index.js';
+import {
+  fulfillPayment,
+  handleFlutterwaveWebhook,
+  handlePaystackWebhook,
+  webhookInfo
+} from '../services/payment/webhooks.js';
 
 const router = Router();
 
 router.get('/providers', (_req, res) => {
-  res.json({ providers: availableProviders() });
+  res.json({ ...paymentOptions(), webhooks: webhookInfo() });
 });
 
-async function fulfillByReference(reference, extra = {}) {
-  const order = await Order.findOne({ 'payment.reference': reference });
-  if (!order) throw new HttpError(404, 'Order not found for that payment');
-  await markOrderPaid(order, { reference, ...extra });
-  return order;
-}
+router.get('/webhooks', (_req, res) => {
+  res.json(webhookInfo());
+});
 
 router.get('/verify', async (req, res) => {
-  const { provider, reference, transaction_id } = req.query;
-  if (provider === 'paystack' && reference) {
-    const data = await verifyPaystack(reference);
-    if (data.status !== 'success') throw new HttpError(400, 'Payment not successful');
-    const order = await fulfillByReference(data.reference, { provider: 'paystack', raw: data });
+  const { provider, reference, transaction_id, trxref, tx_ref } = req.query;
+  const ref = reference || trxref || tx_ref;
+
+  if (provider === 'paystack' || (!provider && ref && paystackConfigured())) {
+    if (!ref) throw new HttpError(400, 'Paystack reference is required');
+    const data = await verifyPaystack(ref);
+    if (String(data.status).toLowerCase() !== 'success') throw new HttpError(400, 'Payment not successful');
+    const { order } = await fulfillPayment({
+      provider: 'paystack',
+      reference: data.reference || ref,
+      raw: data
+    });
     return res.json({ order: publicOrder(order) });
   }
-  if (provider === 'flutterwave' && (transaction_id || reference)) {
-    const data = await verifyFlutterwave(transaction_id);
-    if (data.status !== 'successful') throw new HttpError(400, 'Payment not successful');
-    const order = await fulfillByReference(data.tx_ref, { provider: 'flutterwave', raw: data });
+
+  if (provider === 'flutterwave' || (!provider && (transaction_id || ref) && flutterwaveConfigured())) {
+    let data;
+    if (transaction_id) data = await verifyFlutterwave(transaction_id);
+    else if (ref) data = await verifyFlutterwaveByReference(ref);
+    else throw new HttpError(400, 'Flutterwave transaction_id or tx_ref is required');
+    const status = String(data.status || '').toLowerCase();
+    if (status !== 'successful' && status !== 'success') throw new HttpError(400, 'Payment not successful');
+    const { order } = await fulfillPayment({
+      provider: 'flutterwave',
+      reference: data.tx_ref || ref,
+      raw: data
+    });
     return res.json({ order: publicOrder(order) });
   }
-  if (provider === 'simulate' && reference) {
-    const order = await fulfillByReference(reference, { provider: 'simulate' });
+
+  if (provider === 'simulate' && ref) {
+    const { order } = await fulfillPayment({ provider: 'simulate', reference: ref });
     return res.json({ order: publicOrder(order) });
   }
+
   throw new HttpError(400, 'Missing payment verification details');
 });
 
@@ -51,27 +76,13 @@ router.post('/simulate/:orderNumber', async (req, res) => {
 });
 
 router.post('/paystack/webhook', async (req, res) => {
-  if (!paystackWebhookValid(req)) return res.status(401).json({ message: 'Invalid signature' });
-  const event = req.body;
-  if (event?.event === 'charge.success') {
-    const reference = event.data?.reference;
-    if (reference) {
-      const order = await Order.findOne({ 'payment.reference': reference });
-      if (order) await markOrderPaid(order, { provider: 'paystack', reference, raw: event.data });
-    }
-  }
-  res.json({ received: true });
+  const result = await handlePaystackWebhook(req);
+  res.status(result.status).json(result.body);
 });
 
 router.post('/flutterwave/webhook', async (req, res) => {
-  if (!flutterwaveWebhookValid(req)) return res.status(401).json({ message: 'Invalid hash' });
-  const body = req.body;
-  if (body?.event === 'charge.completed' && body.data?.status === 'successful') {
-    const txRef = body.data.tx_ref;
-    const order = await Order.findOne({ 'payment.reference': txRef });
-    if (order) await markOrderPaid(order, { provider: 'flutterwave', reference: txRef, raw: body.data });
-  }
-  res.json({ received: true });
+  const result = await handleFlutterwaveWebhook(req);
+  res.status(result.status).json(result.body);
 });
 
 export default router;

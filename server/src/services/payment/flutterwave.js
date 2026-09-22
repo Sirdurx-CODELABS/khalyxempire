@@ -17,7 +17,7 @@ export async function initializeFlutterwave(order) {
       tx_ref: order.payment.reference,
       amount: order.total,
       currency: 'NGN',
-      redirect_url: `${env.clientUrl}/order/${order.orderNumber}?paid=1`,
+      redirect_url: `${env.clientUrl}/order/${order.orderNumber}?paid=1&provider=flutterwave`,
       customer: {
         email,
         name: order.guestName || order.shippingAddress?.fullName,
@@ -53,8 +53,20 @@ export async function verifyFlutterwave(transactionId) {
   return data.data;
 }
 
+export async function verifyFlutterwaveByReference(txRef) {
+  const res = await fetch(
+    `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
+    { headers: { Authorization: `Bearer ${env.flutterwaveSecret}` } }
+  );
+  const data = await res.json();
+  if (data.status !== 'success') {
+    throw new HttpError(400, data.message || 'Flutterwave verify by reference failed');
+  }
+  return data.data;
+}
+
 export function flutterwaveWebhookValid(req) {
   const hash = req.headers['verif-hash'];
-  if (!env.flutterwaveHash) return Boolean(hash);
+  if (!env.flutterwaveHash || !hash) return false;
   return hash === env.flutterwaveHash;
 }

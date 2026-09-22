@@ -14,21 +14,35 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: '' },
     phone: { type: String, default: '' },
     role: { type: String, enum: Object.values(ROLES), default: ROLES.CUSTOMER },
+    staffTitle: { type: String, enum: ['admin', 'manager', 'sales', 'cashier', ''], default: '' },
+    pin: { type: String, select: false, default: '' },
+    notes: { type: String, default: '' },
+    tags: [{ type: String }],
     apps: { type: [String], default: undefined },
     permissions: { type: [String], default: [] },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    accountBalance: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
 
-userSchema.pre('save', async function hashPassword(next) {
-  if (!this.password || !this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
+userSchema.pre('save', async function hashSecrets(next) {
+  if (this.password && this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+  if (this.pin && this.isModified('pin') && this.pin.length <= 8) {
+    this.pin = await bcrypt.hash(this.pin, 10);
+  }
   next();
 });
 
 userSchema.methods.matchPassword = function matchPassword(plain) {
   return bcrypt.compare(plain, this.password);
+};
+
+userSchema.methods.matchPin = function matchPin(plain) {
+  if (!this.pin) return Promise.resolve(false);
+  return bcrypt.compare(String(plain), this.pin);
 };
 
 export const User = mongoose.model('User', userSchema);

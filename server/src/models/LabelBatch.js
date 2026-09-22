@@ -20,6 +20,9 @@ const labelBatchSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     notes: { type: String, default: '' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    purchaseOrder: { type: mongoose.Schema.Types.ObjectId, ref: 'PurchaseOrder' },
+    labelSize: { type: String, default: '50x30' },
+    printedAt: Date,
     items: { type: [labelItemSchema], default: [] }
   },
   { timestamps: true }

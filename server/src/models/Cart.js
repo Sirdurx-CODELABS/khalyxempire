@@ -17,14 +17,12 @@ const cartItemSchema = new mongoose.Schema(
 
 const cartSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', sparse: true },
-    guestId: { type: String, sparse: true },
+    // unique+sparse only here — do not also call schema.index() on these paths
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', unique: true, sparse: true },
+    guestId: { type: String, unique: true, sparse: true },
     items: { type: [cartItemSchema], default: [] }
   },
   { timestamps: true }
 );
-
-cartSchema.index({ user: 1 }, { unique: true, sparse: true });
-cartSchema.index({ guestId: 1 }, { unique: true, sparse: true });
 
 export const Cart = mongoose.model('Cart', cartSchema);

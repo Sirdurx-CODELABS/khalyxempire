@@ -19,7 +19,7 @@ export async function initializePaystack(order) {
       email,
       amount: toKobo(order.total),
       reference: order.payment.reference,
-      callback_url: `${env.clientUrl}/order/${order.orderNumber}?paid=1`,
+      callback_url: `${env.clientUrl}/order/${order.orderNumber}?paid=1&provider=paystack`,
       metadata: { orderNumber: order.orderNumber, orderId: String(order._id) }
     })
   });

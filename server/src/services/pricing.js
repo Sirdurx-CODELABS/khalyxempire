@@ -7,7 +7,7 @@ export function shippingFor(subtotal) {
   return env.shippingFee;
 }
 
-export async function applyCoupon(code, subtotal) {
+export async function applyCoupon(code, subtotal, items = []) {
   if (!code) return { discount: 0, coupon: null };
   const coupon = await Coupon.findOne({ code: code.toUpperCase().trim(), isActive: true });
   if (!coupon) throw new HttpError(400, 'Invalid coupon');
@@ -15,6 +15,16 @@ export async function applyCoupon(code, subtotal) {
   if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) throw new HttpError(400, 'Coupon fully used');
   if (subtotal < coupon.minSubtotal) {
     throw new HttpError(400, `Coupon requires a ${coupon.minSubtotal} NGN subtotal`);
+  }
+  if (coupon.productIds?.length) {
+    const allowed = new Set(coupon.productIds.map((id) => String(id)));
+    const ok = items.some((item) => allowed.has(String(item.product || item.productId)));
+    if (!ok) throw new HttpError(400, 'Coupon does not apply to these products');
+  }
+  if (coupon.categoryIds?.length) {
+    const allowed = new Set(coupon.categoryIds.map((id) => String(id)));
+    const ok = items.some((item) => allowed.has(String(item.category || item.categoryId)));
+    if (!ok) throw new HttpError(400, 'Coupon does not apply to this category');
   }
   const discount =
     coupon.type === 'percent' ? Math.round((subtotal * coupon.value) / 100) : Math.min(coupon.value, subtotal);

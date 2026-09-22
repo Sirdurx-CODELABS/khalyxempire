@@ -10,6 +10,7 @@ import { Wishlist } from '../models/Wishlist.js';
 import { Review } from '../models/Review.js';
 import { InventoryMovement } from '../models/InventoryMovement.js';
 import { LabelBatch } from '../models/LabelBatch.js';
+import { SupplyRequest } from '../models/SupplyRequest.js';
 import { PRODUCTS } from './data.js';
 
 function categoryDocs() {
@@ -29,6 +30,7 @@ const DEMO_USERS = [
     email: 'admin@khalyx.ng',
     password: 'KhalyxAdmin!23',
     role: ROLES.ADMIN,
+    staffTitle: 'admin',
     apps: ['admin', 'erp'],
     phone: '08000000001',
     permissions: PERMISSIONS
@@ -38,8 +40,10 @@ const DEMO_USERS = [
     email: 'staff@khalyx.ng',
     password: 'KhalyxStaff!23',
     role: ROLES.STAFF,
+    staffTitle: 'sales',
     apps: ['erp'],
     phone: '08000000002',
+    pin: '1234',
     permissions: []
   },
   {
@@ -77,9 +81,22 @@ export async function syncCategories() {
 
 export async function ensureShopStructure() {
   await syncCategories();
+  await upsertDemoUsers();
+  const { ensureShiftDefaults } = await import('../services/hr.js');
+  await ensureShiftDefaults();
+}
+
+async function upsertDemoUsers() {
   for (const u of DEMO_USERS) {
-    const exists = await User.findOne({ email: u.email });
-    if (!exists) await User.create(u);
+    const exists = await User.findOne({ email: u.email }).select('+pin');
+    if (!exists) {
+      await User.create(u);
+      continue;
+    }
+    if (!exists.staffTitle && u.staffTitle) exists.staffTitle = u.staffTitle;
+    if (u.pin && !exists.pin) exists.pin = u.pin;
+    if (u.apps && !exists.apps?.length) exists.apps = u.apps;
+    await exists.save();
   }
 }
 
@@ -93,7 +110,8 @@ export async function seedAll({ reset = true } = {}) {
       InventoryMovement.deleteMany({}),
       LabelBatch.deleteMany({}),
       Supplier.deleteMany({}),
-      PurchaseOrder.deleteMany({})
+      PurchaseOrder.deleteMany({}),
+      SupplyRequest.deleteMany({})
     ]);
   }
 
@@ -139,10 +157,7 @@ export async function seedAll({ reset = true } = {}) {
   }
   await Product.insertMany(docs);
 
-  for (const u of DEMO_USERS) {
-    const exists = await User.findOne({ email: u.email });
-    if (!exists) await User.create(u);
-  }
+  await upsertDemoUsers();
 
   const count = await Product.countDocuments();
   console.log(`[seed] ${categories.length} categories, ${count} products written. Edit server/src/seed/data.js and run npm run seed, or change items in admin.`);

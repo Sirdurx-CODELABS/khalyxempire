@@ -153,6 +153,25 @@ export async function setOrderStatus(order, status) {
   return order;
 }
 
+export async function refundOrder(order, { amount, note } = {}) {
+  if (!PAID_LIKE.includes(order.status) && order.status !== 'cancelled') {
+    throw new HttpError(400, 'Only paid orders can be refunded');
+  }
+  const remaining = Math.max(0, order.total - (order.refundedAmount || 0));
+  const amt = amount == null || amount === '' ? remaining : Math.min(remaining, Number(amount) || 0);
+  if (amt <= 0) throw new HttpError(400, 'Nothing left to refund');
+  if (amt >= remaining) {
+    await restoreSale(order.items, { orderId: order._id, channel: order.channel, note: note || 'Refund' });
+    order.status = 'cancelled';
+    order.payment.status = 'refunded';
+  }
+  order.refundedAmount = (order.refundedAmount || 0) + amt;
+  order.refundNote = note || '';
+  order.refundedAt = new Date();
+  await order.save();
+  return order;
+}
+
 export function publicOrder(order) {
   return {
     id: order._id,
@@ -164,8 +183,13 @@ export function publicOrder(order) {
       status: order.payment.status,
       reference: order.payment.reference,
       tendered: order.payment.tendered,
-      change: order.payment.change
+      change: order.payment.change,
+      amount: order.payment.amount
     },
+    payments: order.payments || [],
+    refundedAmount: order.refundedAmount || 0,
+    refundNote: order.refundNote || '',
+    refundedAt: order.refundedAt,
     items: order.items,
     shippingAddress: order.shippingAddress,
     guestEmail: order.guestEmail,
@@ -175,6 +199,8 @@ export function publicOrder(order) {
     soldBy: order.soldBy,
     subtotal: order.subtotal,
     discount: order.discount,
+    bulkDiscount: order.bulkDiscount || 0,
+    discountBreakdown: order.discountBreakdown || [],
     shippingFee: order.shippingFee,
     total: order.total,
     couponCode: order.couponCode,

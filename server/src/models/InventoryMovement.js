@@ -10,6 +10,8 @@ const inventoryMovementSchema = new mongoose.Schema(
     sku: String,
     qty: { type: Number, required: true },
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reason: { type: String, default: '' },
     note: { type: String, default: '' }
   },
   { timestamps: true }

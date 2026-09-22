@@ -20,7 +20,8 @@ router.post('/', async (req, res) => {
     name: req.body.name,
     notes: req.body.notes,
     items,
-    createdBy: req.user._id
+    createdBy: req.user._id,
+    labelSize: req.body.labelSize
   });
   res.status(201).json({ batch: publicBatch(batch, { expand: true }) });
 });

@@ -11,6 +11,7 @@ const orderItemSchema = new mongoose.Schema(
     size: String,
     color: String,
     price: Number,
+    costPrice: { type: Number, default: 0 },
     qty: Number
   },
   { _id: false }
@@ -34,6 +35,17 @@ const orderSchema = new mongoose.Schema(
       change: { type: Number, default: 0 },
       raw: { type: mongoose.Schema.Types.Mixed }
     },
+    payments: [
+      {
+        method: { type: String, enum: ['cash', 'card', 'transfer', 'account', 'paystack', 'flutterwave', 'simulate'] },
+        amount: { type: Number, default: 0 },
+        tendered: { type: Number, default: 0 },
+        change: { type: Number, default: 0 }
+      }
+    ],
+    refundedAmount: { type: Number, default: 0 },
+    refundNote: { type: String, default: '' },
+    refundedAt: Date,
     items: [orderItemSchema],
     shippingAddress: {
       fullName: String,
@@ -47,6 +59,14 @@ const orderSchema = new mongoose.Schema(
     },
     subtotal: { type: Number, required: true },
     discount: { type: Number, default: 0 },
+    bulkDiscount: { type: Number, default: 0 },
+    discountBreakdown: [
+      {
+        type: { type: String, enum: ['bulk', 'coupon', 'manual'] },
+        label: String,
+        amount: { type: Number, default: 0 }
+      }
+    ],
     shippingFee: { type: Number, default: 0 },
     total: { type: Number, required: true },
     couponCode: { type: String, default: '' },

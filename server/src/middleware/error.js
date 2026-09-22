@@ -9,6 +9,9 @@ export function errorHandler(err, _req, res, _next) {
   if (err?.code === 11000) {
     return res.status(409).json({ message: 'An account with that email already exists' });
   }
+  if (err?.name === 'CastError') {
+    return res.status(400).json({ message: 'Invalid id in request' });
+  }
   const status = err.status || err.statusCode || 500;
   const message = err.message || 'Server error';
   if (status >= 500) {
