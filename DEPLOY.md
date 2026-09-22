@@ -1,5 +1,7 @@
 # Deploying Khalyx Empire
 
+For the long-term **Hostinger + Cloudflare + VPS** layout (domain, DNS, marketing sites, Empire apps), see [`HYBRID-HOSTING.md`](./HYBRID-HOSTING.md).
+
 This repo is an **npm workspaces** project:
 
 | App | Path | Local URL | Production role |
