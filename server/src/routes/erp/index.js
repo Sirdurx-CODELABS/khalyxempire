@@ -9,6 +9,8 @@ import reports from './reports.js';
 import labels from './labels.js';
 import sync from './sync.js';
 import search from './search.js';
+import inventory from './inventory.js';
+import orders from './orders.js';
 
 const router = Router();
 router.use(...requireStaff, requireApp(APPS.ERP));
@@ -20,5 +22,7 @@ router.use('/reports', reports);
 router.use('/labels', labels);
 router.use('/sync', sync);
 router.use('/search', search);
+router.use('/inventory', inventory);
+router.use('/orders', orders);
 
 export default router;

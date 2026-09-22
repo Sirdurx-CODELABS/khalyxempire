@@ -29,6 +29,16 @@ export function safeNext(next) {
   return next;
 }
 
+function oauthCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: env.nodeEnv === 'production',
+    maxAge: 10 * 60 * 1000,
+    path: '/'
+  };
+}
+
 export function beginGoogleLogin(req, res) {
   if (!auth0Enabled()) {
     const reason = encodeURIComponent('Google sign-in is not configured yet. Add Auth0 keys in server/.env.');
@@ -40,12 +50,7 @@ export function beginGoogleLogin(req, res) {
     next: safeNext(req.query.next),
     guestId: String(req.query.guestId || '')
   });
-  res.cookie(OAUTH_COOKIE, payload, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: env.nodeEnv === 'production',
-    maxAge: 10 * 60 * 1000
-  });
+  res.cookie(OAUTH_COOKIE, payload, oauthCookieOptions());
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: env.auth0ClientId,
@@ -68,7 +73,7 @@ function readOauthCookie(req) {
 export async function finishGoogleLogin(req, res) {
   const { error, error_description: description, code, state } = req.query;
   const stored = readOauthCookie(req);
-  res.clearCookie(OAUTH_COOKIE);
+  res.clearCookie(OAUTH_COOKIE, { path: '/' });
 
   if (error) {
     const reason = encodeURIComponent(description || error);
@@ -78,7 +83,10 @@ export async function finishGoogleLogin(req, res) {
     return res.redirect(`${env.clientUrl}/login?error=${encodeURIComponent('Google sign-in is not configured')}`);
   }
   if (!code || !state || state !== stored.state) {
-    return res.redirect(`${env.clientUrl}/login?error=${encodeURIComponent('Google sign-in was cancelled')}`);
+    const reason = !stored.state
+      ? 'Google sign-in session expired. Use Continue with Google again (do not bookmark the Auth0 page).'
+      : 'Google sign-in was cancelled or the state cookie was lost.';
+    return res.redirect(`${env.clientUrl}/login?error=${encodeURIComponent(reason)}`);
   }
 
   try {
@@ -133,7 +141,7 @@ export async function finishGoogleLogin(req, res) {
     const token = signToken(user);
     setAuthCookie(res, token);
     const next = encodeURIComponent(safeNext(stored.next));
-    res.redirect(`${env.clientUrl}/auth/callback#token=${encodeURIComponent(token)}&next=${next}`);
+    res.redirect(`${env.clientUrl.replace(/\/$/, '')}/auth/callback#token=${encodeURIComponent(token)}&next=${next}`);
   } catch (err) {
     const reason = encodeURIComponent(err.message || 'Google sign-in failed');
     res.redirect(`${env.clientUrl}/login?error=${reason}`);

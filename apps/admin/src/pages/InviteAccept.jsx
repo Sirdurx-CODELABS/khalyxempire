@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { AuthButton, AuthError, AuthField, AuthShell, AuthSuccess } from '@khalyx/auth-ui';
+import { AuthButton, AuthError, AuthField, AuthShell, AuthSuccess, PasswordInput } from '@khalyx/auth-ui';
 import { api } from '../api/client.js';
 import { useAdminAuth } from '../store/authStore.js';
 
@@ -61,8 +61,7 @@ export default function InviteAccept() {
           <form className="auth-form" onSubmit={submit}>
             <AuthError>{error}</AuthError>
             <AuthField label="New password">
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -71,8 +70,7 @@ export default function InviteAccept() {
               />
             </AuthField>
             <AuthField label="Confirm password">
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 autoComplete="new-password"

@@ -44,6 +44,13 @@ export default function Reports() {
           >
             Export CSV
           </button>{' '}
+          <button
+            className="btn ghost"
+            type="button"
+            onClick={() => downloadFile('/admin/reports/sales', 'khalyx-sales.xls', { from, to, category, channel, format: 'excel' })}
+          >
+            Export Excel
+          </button>{' '}
           <button className="btn ghost" type="button" onClick={() => window.print()}>
             Print / PDF
           </button>

@@ -15,13 +15,24 @@ export default function Products() {
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
   const [supplier, setSupplier] = useState('');
+  const [flag, setFlag] = useState('');
   const [cats, setCats] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const [barcodeFor, setBarcodeFor] = useState(null);
 
   const load = async () => {
-    const { data } = await api.get('/admin/products', { params: { q, category: category || undefined, status: status || undefined, supplier: supplier || undefined, limit: 200 } });
+    const { data } = await api.get('/admin/products', {
+      params: {
+        q,
+        category: category || undefined,
+        status: status || undefined,
+        supplier: supplier || undefined,
+        newArrival: flag === 'newArrival' ? 'true' : undefined,
+        featured: flag === 'featured' ? 'true' : undefined,
+        limit: 200
+      }
+    });
     setProducts(data.products || []);
   };
 
@@ -34,7 +45,7 @@ export default function Products() {
 
   useEffect(() => {
     load();
-  }, [q, category, status, supplier]);
+  }, [q, category, status, supplier, flag]);
 
   const remove = async (id) => {
     if (!confirm('Delete this product from Admin, ERP, and the storefront?')) return;
@@ -77,9 +88,10 @@ export default function Products() {
         </label>
       </div>
       <p className="muted" style={{ marginTop: -4 }}>
-        Shared catalog for Admin, ERP, and the online storefront. Changes sync within a few seconds.
+        Shared catalog for Admin, ERP, and the online storefront. Tick <strong>New arrival</strong> on a product to show it in the
+        storefront hero.
       </p>
-      {!q && !category && !status && !supplier && !products.length ? (
+      {!q && !category && !status && !supplier && !flag && !products.length ? (
         <EmptyState
           title="No products yet"
           body="Add your first product to stock the storefront and POS."
@@ -127,6 +139,13 @@ export default function Products() {
                 ))}
               </select>
             </Field>
+            <Field label="Flags">
+              <select value={flag} onChange={(e) => setFlag(e.target.value)}>
+                <option value="">All products</option>
+                <option value="newArrival">New arrivals (hero)</option>
+                <option value="featured">Featured</option>
+              </select>
+            </Field>
           </>
         }
         columns={[
@@ -144,6 +163,10 @@ export default function Products() {
               <>
                 <Link to={`/products/${p._id}`}>{p.name}</Link>
                 <div className="muted">{p.slug}</div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                  {p.newArrival ? <span className="badge paid">New arrival</span> : null}
+                  {p.featured ? <span className="badge approved">Featured</span> : null}
+                </div>
               </>
             )
           },

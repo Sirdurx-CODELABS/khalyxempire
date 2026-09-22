@@ -5,7 +5,7 @@ import { Cart } from '../models/Cart.js';
 import { Coupon } from '../models/Coupon.js';
 import { HttpError } from '../middleware/error.js';
 import { commitStock, releaseStock, reserveStock, restoreSale } from './inventory.js';
-import { applyCoupon, totals } from './pricing.js';
+import { applyCoupon, totalsWithSettings } from './pricing.js';
 import { initializePayment } from './payment/index.js';
 import { sendOrderEmail } from './email.js';
 import { buildWhatsAppLink } from './whatsapp.js';
@@ -28,7 +28,7 @@ export async function createCheckout({ cart, user, contact, address, paymentProv
 
   const subtotal = cart.items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const { discount, coupon } = await applyCoupon(couponCode, subtotal);
-  const money = totals({ subtotal, discount });
+  const money = await totalsWithSettings({ subtotal, discount });
 
   const order = await Order.create({
     orderNumber: generateOrderNumber(),
@@ -136,8 +136,8 @@ export async function cancelUnpaidOrder(order) {
 
 const PAID_LIKE = ['paid', 'processing', 'shipped', 'delivered'];
 
-export async function setOrderStatus(order, status) {
-  if (order.status === status) return order;
+export async function setOrderStatus(order, status, extras = {}) {
+  if (order.status === status && !extras.force) return order;
   if (order.status === 'cancelled') throw new HttpError(409, 'Cancelled orders cannot change status');
   if (status === 'cancelled') {
     if (order.status === 'pending') return cancelUnpaidOrder(order);
@@ -149,6 +149,58 @@ export async function setOrderStatus(order, status) {
     return order;
   }
   order.status = status;
+  if (status === 'shipped') {
+    if (!order.shipping) order.shipping = {};
+    order.shipping.shippedAt = order.shipping.shippedAt || new Date();
+    if (extras.carrier != null) order.shipping.carrier = String(extras.carrier || '').trim();
+    if (extras.trackingNumber != null) order.shipping.trackingNumber = String(extras.trackingNumber || '').trim();
+    if (extras.trackingUrl != null) order.shipping.trackingUrl = String(extras.trackingUrl || '').trim();
+    if (extras.estimatedDelivery) order.shipping.estimatedDelivery = new Date(extras.estimatedDelivery);
+    order.markModified('shipping');
+  }
+  await order.save();
+  return order;
+}
+
+export async function packOrder(order, { notes, checkedSkus, userId } = {}) {
+  if (!['paid', 'processing'].includes(order.status)) {
+    throw new HttpError(400, 'Only paid or processing orders can be packed');
+  }
+  if (!order.fulfillment) order.fulfillment = {};
+  order.fulfillment.packedAt = new Date();
+  order.fulfillment.packedBy = userId || order.fulfillment.packedBy;
+  if (notes != null) order.fulfillment.packingNotes = String(notes || '').trim();
+  if (Array.isArray(checkedSkus)) {
+    order.fulfillment.checkedSkus = checkedSkus.map((s) => String(s));
+  }
+  order.markModified('fulfillment');
+  if (order.status === 'paid') order.status = 'processing';
+  await order.save();
+  return order;
+}
+
+export async function updateShipment(order, body = {}) {
+  if (!order.shipping) order.shipping = {};
+  if (body.carrier != null) order.shipping.carrier = String(body.carrier || '').trim();
+  if (body.trackingNumber != null) order.shipping.trackingNumber = String(body.trackingNumber || '').trim();
+  if (body.trackingUrl != null) order.shipping.trackingUrl = String(body.trackingUrl || '').trim();
+  if (body.estimatedDelivery) order.shipping.estimatedDelivery = new Date(body.estimatedDelivery);
+  order.markModified('shipping');
+  await order.save();
+  return order;
+}
+
+export async function updateRma(order, body = {}) {
+  if (!order.rma) order.rma = {};
+  const status = body.status || order.rma.status || 'requested';
+  const allowed = ['requested', 'approved', 'received', 'closed', ''];
+  if (!allowed.includes(status)) throw new HttpError(400, 'Invalid RMA status');
+  order.rma.status = status;
+  if (body.reason != null) order.rma.reason = String(body.reason || '').trim();
+  if (body.note != null) order.rma.note = String(body.note || '').trim();
+  if (status === 'requested' && !order.rma.requestedAt) order.rma.requestedAt = new Date();
+  if (status === 'closed') order.rma.resolvedAt = new Date();
+  order.markModified('rma');
   await order.save();
   return order;
 }
@@ -207,6 +259,10 @@ export function publicOrder(order) {
     whatsappLink: order.whatsappLink,
     paidAt: order.paidAt,
     createdAt: order.createdAt,
-    updatedAt: order.updatedAt
+    updatedAt: order.updatedAt,
+    fulfillment: order.fulfillment || {},
+    shipping: order.shipping || {},
+    rma: order.rma || {}
   };
 }
+

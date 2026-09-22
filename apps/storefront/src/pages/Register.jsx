@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { PasswordInput } from '@khalyx/ui';
 import { useAuth } from '../store/authStore.js';
 import { useCart } from '../store/cartStore.js';
 import GoogleSignIn from '../components/GoogleSignIn.jsx';
@@ -35,7 +36,13 @@ export default function Register() {
         <input required placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input type="email" required placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        <input type="password" required minLength={8} placeholder="Password (8+ characters)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <PasswordInput
+          required
+          minLength={8}
+          placeholder="Password (8+ characters)"
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+        />
         <button className="btn full" type="submit">
           Join Khalyx
         </button>

@@ -139,7 +139,9 @@ FREE_SHIPPING_THRESHOLD=150000
 AUTH0_DOMAIN=
 AUTH0_CLIENT_ID=
 AUTH0_CLIENT_SECRET=
-AUTH0_CALLBACK_URL=https://YOUR-STOREFRONT.vercel.app/api/auth/auth0/callback
+# MUST be the API host — Vercel has no /api Express routes
+AUTH0_CALLBACK_URL=https://YOUR-API.onrender.com/api/auth/auth0/callback
+API_PUBLIC_URL=https://YOUR-API.onrender.com
 ```
 
 4. After the first deploy, open a **Render Shell** (or any one-off job) and seed:

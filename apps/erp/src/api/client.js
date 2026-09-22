@@ -50,3 +50,13 @@ export function money(n) {
     maximumFractionDigits: 0
   }).format(Number(n) || 0);
 }
+
+export async function downloadFile(url, filename, params) {
+  const { data } = await api.get(url, { params, responseType: 'blob' });
+  const href = URL.createObjectURL(data);
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(href);
+}

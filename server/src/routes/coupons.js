@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { applyCoupon, totals } from '../services/pricing.js';
+import { applyCoupon, totalsWithSettings } from '../services/pricing.js';
 import { getCartDoc } from '../services/cart.js';
 import { optionalAuth, guestIdFrom } from '../middleware/auth.js';
 
@@ -13,7 +13,7 @@ router.post('/validate', optionalAuth, async (req, res) => {
     valid: true,
     code: coupon.code,
     discount,
-    ...totals({ subtotal, discount })
+    ...(await totalsWithSettings({ subtotal, discount }))
   });
 });
 

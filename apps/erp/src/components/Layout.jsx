@@ -8,11 +8,17 @@ import { api } from '../api/client.js';
 const GROUPS = [
   {
     label: 'Sales',
-    items: [{ to: '/', label: 'POS', icon: 'pos', end: true }]
+    items: [
+      { to: '/', label: 'POS', icon: 'pos', end: true },
+      { to: '/orders', label: 'Orders', icon: 'clipboard' }
+    ]
   },
   {
     label: 'Catalog',
-    items: [{ to: '/labels', label: 'Barcode labels', icon: 'barcode' }]
+    items: [
+      { to: '/inventory', label: 'Inventory', icon: 'box' },
+      { to: '/labels', label: 'Barcode labels', icon: 'barcode' }
+    ]
   },
   {
     label: 'People',
@@ -25,7 +31,8 @@ const GROUPS = [
     label: 'Insights',
     items: [
       { to: '/clock', label: 'Clock', icon: 'clock' },
-      { to: '/reconciliation', label: 'Reconcile', icon: 'scale' }
+      { to: '/reconciliation', label: 'Reconcile', icon: 'scale' },
+      { to: '/reports', label: 'Reports', icon: 'chart' }
     ]
   }
 ];

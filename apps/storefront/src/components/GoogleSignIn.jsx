@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { GoogleIcon } from './Icons.jsx';
-import { api, guestId } from '../api/client.js';
+import { api, guestId, apiAbsoluteUrl } from '../api/client.js';
 
 export default function GoogleSignIn({ next = '/account', label = 'Continue with Google' }) {
   const [google, setGoogle] = useState(null);
@@ -22,7 +22,8 @@ export default function GoogleSignIn({ next = '/account', label = 'Continue with
   const start = () => {
     if (!google) return;
     const params = new URLSearchParams({ next, guestId: guestId() });
-    window.location.href = `/api/auth/google?${params}`;
+    // Must open the Express API host (not Vercel). Callback URL in Auth0 must match AUTH0_CALLBACK_URL on the API.
+    window.location.href = apiAbsoluteUrl(`/api/auth/google?${params}`);
   };
 
   if (google === null) {

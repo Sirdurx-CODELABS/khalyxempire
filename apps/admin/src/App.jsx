@@ -23,6 +23,7 @@ import Staff from './pages/Staff.jsx';
 import Labels from './pages/Labels.jsx';
 import Settings from './pages/Settings.jsx';
 import Suppliers from './pages/Suppliers.jsx';
+import Categories from './pages/Categories.jsx';
 
 export default function App() {
   const hydrate = useAdminAuth((s) => s.hydrate);
@@ -149,6 +150,14 @@ export default function App() {
           element={
             <Guard permission="coupons">
               <Coupons />
+            </Guard>
+          }
+        />
+        <Route
+          path="categories"
+          element={
+            <Guard permission="products">
+              <Categories />
             </Guard>
           }
         />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AuthButton, AuthError, AuthField, AuthShell, AuthSuccess } from '@khalyx/auth-ui';
+import { AuthButton, AuthError, AuthField, AuthShell, AuthSuccess, PasswordInput } from '@khalyx/auth-ui';
 import { api } from '../api/client.js';
 
 const logoSrc = `${import.meta.env.BASE_URL}brand/logo.png`;
@@ -66,10 +66,10 @@ export default function ResetPassword() {
           <form className="auth-form" onSubmit={submit}>
             <AuthError>{error}</AuthError>
             <AuthField label="New password">
-              <input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <PasswordInput required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </AuthField>
             <AuthField label="Confirm password">
-              <input type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              <PasswordInput required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </AuthField>
             <AuthButton loading={loading} disabled={!valid}>
               Save password

@@ -204,8 +204,13 @@ textarea {
 
 .field input,
 .field select,
-.field textarea {
+.field textarea,
+.field .password-input input {
   width: 100%;
+}
+
+.field .password-input input {
+  padding-right: 4.25rem;
 }
 
 .dt-foot {

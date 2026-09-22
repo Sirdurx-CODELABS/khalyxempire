@@ -2,26 +2,15 @@ import { Router } from 'express';
 import { ORDER_STATUSES, SHIPPING_CARRIERS } from '@khalyx/shared';
 import { Order } from '../../models/Order.js';
 import { HttpError } from '../../middleware/error.js';
-import { requirePermission } from '../../middleware/admin.js';
-import {
-  publicOrder,
-  setOrderStatus,
-  refundOrder,
-  packOrder,
-  updateShipment,
-  updateRma
-} from '../../services/orders.js';
-import { sendCsv } from '../../utils/csv.js';
+import { publicOrder, setOrderStatus, packOrder, updateShipment } from '../../services/orders.js';
 
 const router = Router();
-router.use(requirePermission('orders'));
 
 router.get('/', async (req, res) => {
-  const { status, q, page = 1, limit = 25, from, to, channel, payment } = req.query;
+  const { status, q, page = 1, limit = 40, from, to, channel } = req.query;
   const filter = {};
   if (status) filter.status = status;
   if (channel) filter.channel = channel;
-  if (payment) filter['payment.provider'] = payment;
   if (from || to) {
     filter.createdAt = {};
     if (from) filter.createdAt.$gte = new Date(from);
@@ -34,7 +23,6 @@ router.get('/', async (req, res) => {
   if (q) {
     filter.$or = [
       { orderNumber: { $regex: q, $options: 'i' } },
-      { guestEmail: { $regex: q, $options: 'i' } },
       { guestName: { $regex: q, $options: 'i' } },
       { guestPhone: { $regex: q, $options: 'i' } },
       { 'shipping.trackingNumber': { $regex: q, $options: 'i' } }
@@ -42,15 +30,20 @@ router.get('/', async (req, res) => {
   }
   const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
   const [orders, total] = await Promise.all([
-    Order.find(filter).populate('user', 'name email').populate('soldBy', 'name').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+    Order.find(filter).populate('soldBy', 'name').sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
     Order.countDocuments(filter)
   ]);
-  res.json({ orders: orders.map(publicOrder), total, page: Number(page), statuses: ORDER_STATUSES, carriers: SHIPPING_CARRIERS });
+  res.json({
+    orders: orders.map(publicOrder),
+    total,
+    page: Number(page),
+    statuses: ORDER_STATUSES,
+    carriers: SHIPPING_CARRIERS
+  });
 });
 
 router.get('/:orderNumber', async (req, res) => {
   const order = await Order.findOne({ orderNumber: req.params.orderNumber })
-    .populate('user', 'name email phone')
     .populate('soldBy', 'name')
     .populate('fulfillment.packedBy', 'name');
   if (!order) throw new HttpError(404, 'Order not found');
@@ -60,10 +53,6 @@ router.get('/:orderNumber', async (req, res) => {
 router.patch('/:orderNumber', async (req, res) => {
   const order = await Order.findOne({ orderNumber: req.params.orderNumber });
   if (!order) throw new HttpError(404, 'Order not found');
-  if (req.body.refund) {
-    const updated = await refundOrder(order, { amount: req.body.amount, note: req.body.note });
-    return res.json({ order: publicOrder(updated) });
-  }
   if (req.body.pack) {
     const updated = await packOrder(order, {
       notes: req.body.packingNotes,
@@ -76,37 +65,13 @@ router.patch('/:orderNumber', async (req, res) => {
     const updated = await updateShipment(order, req.body.shipment);
     return res.json({ order: publicOrder(updated) });
   }
-  if (req.body.rma) {
-    const updated = await updateRma(order, req.body.rma);
-    return res.json({ order: publicOrder(updated) });
-  }
   if (!ORDER_STATUSES.includes(req.body.status)) throw new HttpError(400, 'Invalid status');
   const updated = await setOrderStatus(order, req.body.status, {
     carrier: req.body.carrier,
     trackingNumber: req.body.trackingNumber,
-    trackingUrl: req.body.trackingUrl,
-    estimatedDelivery: req.body.estimatedDelivery
+    trackingUrl: req.body.trackingUrl
   });
   res.json({ order: publicOrder(updated) });
-});
-
-router.get('/:orderNumber/export', async (req, res) => {
-  const order = await Order.findOne({ orderNumber: req.params.orderNumber });
-  if (!order) throw new HttpError(404, 'Order not found');
-  sendCsv(
-    res,
-    `${order.orderNumber}.csv`,
-    order.items.map((i) => ({
-      order: order.orderNumber,
-      sku: i.sku,
-      name: i.name,
-      size: i.size,
-      color: i.color,
-      qty: i.qty,
-      price: i.price,
-      lineTotal: i.price * i.qty
-    }))
-  );
 });
 
 export default router;

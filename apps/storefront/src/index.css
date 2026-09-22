@@ -919,6 +919,7 @@ h3,
 .form input,
 .form select,
 .form textarea,
+.form .password-input input,
 .filters input,
 .filters select {
   width: 100%;
@@ -926,6 +927,10 @@ h3,
   border: 1px solid #d8d0c0;
   background: var(--white);
   font-size: 16px;
+}
+
+.form .password-input input {
+  padding-right: 4.25rem;
 }
 
 .form-row {

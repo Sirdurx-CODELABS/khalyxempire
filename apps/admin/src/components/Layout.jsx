@@ -20,6 +20,7 @@ function groups(can, user, alerts) {
       label: 'Catalog',
       items: [
         can('products') ? { to: '/products', label: 'Products', icon: 'bag' } : null,
+        can('products') ? { to: '/categories', label: 'Categories', icon: 'tag' } : null,
         can('inventory')
           ? {
               to: '/inventory',

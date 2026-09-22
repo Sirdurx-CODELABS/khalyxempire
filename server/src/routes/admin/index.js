@@ -15,11 +15,13 @@ import settings from './settings.js';
 import suppliers from './suppliers.js';
 import notifications from './notifications.js';
 import search from './search.js';
+import categories from './categories.js';
 
 const router = Router();
 router.use(...requireStaff, requireApp(APPS.ADMIN));
 router.use('/dashboard', dashboard);
 router.use('/products', products);
+router.use('/categories', categories);
 router.use('/orders', orders);
 router.use('/customers', customers);
 router.use('/inventory', inventory);

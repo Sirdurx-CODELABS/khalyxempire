@@ -73,7 +73,27 @@ const orderSchema = new mongoose.Schema(
     whatsappLink: { type: String, default: '' },
     paidAt: Date,
     stockReserved: { type: Boolean, default: false },
-    soldBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }
+    soldBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    fulfillment: {
+      packedAt: Date,
+      packedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      packingNotes: { type: String, default: '' },
+      checkedSkus: [{ type: String }]
+    },
+    shipping: {
+      carrier: { type: String, default: '' },
+      trackingNumber: { type: String, default: '' },
+      trackingUrl: { type: String, default: '' },
+      shippedAt: Date,
+      estimatedDelivery: Date
+    },
+    rma: {
+      status: { type: String, enum: ['', 'requested', 'approved', 'received', 'closed'], default: '' },
+      reason: { type: String, default: '' },
+      note: { type: String, default: '' },
+      requestedAt: Date,
+      resolvedAt: Date
+    }
   },
   { timestamps: true }
 );

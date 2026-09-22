@@ -106,6 +106,8 @@ export const PAYMENT_PROVIDERS = ['paystack', 'flutterwave', 'simulate', 'cash',
 
 export const ORDER_CHANNELS = ['online', 'pos'];
 
+export const SHIPPING_CARRIERS = ['GIG Logistics', 'DHL', 'FedEx', 'NIPOST', 'Kwik', 'Other'];
+
 export const STAFF_TITLES = ['admin', 'manager', 'sales', 'cashier'];
 
 export const WEEKDAYS = [

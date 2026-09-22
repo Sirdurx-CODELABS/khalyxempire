@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PERMISSIONS, permissionsForTitle } from '@khalyx/shared';
-import { DataTable } from '@khalyx/ui';
+import { DataTable, PasswordInput } from '@khalyx/ui';
 import { api } from '../../api/client.js';
 import Field from '../../components/Field.jsx';
 import { ACCESS_LABELS, TITLE_LABELS } from './labels.js';
@@ -257,7 +257,7 @@ export default function People({ users, meta, canEdit, onChange }) {
             <p className="muted">They will receive a branded invite to the Admin or ERP login screen.</p>
           ) : (
             <Field label="Password" hint={editing ? 'Leave blank to keep' : 'Min 8 characters'} required={!editing && !form.invite}>
-              <input type="password" minLength={editing || form.invite ? 0 : 8} required={!editing && !form.invite} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              <PasswordInput minLength={editing || form.invite ? 0 : 8} required={!editing && !form.invite} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </Field>
           )}
           {inviteUrl ? (

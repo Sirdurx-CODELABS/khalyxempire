@@ -370,8 +370,13 @@ table.data th.is-sort {
 
 .field input,
 .field select,
-.field textarea {
+.field textarea,
+.field .password-input input {
   width: 100%;
+}
+
+.field .password-input input {
+  padding-right: 4.25rem;
 }
 
 .toolbar .field {
@@ -641,6 +646,24 @@ tr.is-selected td {
   background: var(--black);
   color: var(--cream);
   border-color: var(--black);
+}
+
+.settings-copy-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 12px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-code {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  word-break: break-all;
+  color: var(--black);
 }
 
 .staff-split {

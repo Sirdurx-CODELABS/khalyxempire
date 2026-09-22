@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { AuthButton, AuthError, AuthField, AuthShell, rememberEmail, rememberedEmail } from '@khalyx/auth-ui';
+import { AuthButton, AuthError, AuthField, AuthShell, PasswordInput, rememberEmail, rememberedEmail } from '@khalyx/auth-ui';
 import { useAdminAuth } from '../store/authStore.js';
 
 const logoSrc = `${import.meta.env.BASE_URL}brand/logo.png`;
@@ -48,8 +48,7 @@ export default function Login() {
           />
         </AuthField>
         <AuthField label="Password">
-          <input
-            type="password"
+          <PasswordInput
             autoComplete="current-password"
             required
             value={form.password}

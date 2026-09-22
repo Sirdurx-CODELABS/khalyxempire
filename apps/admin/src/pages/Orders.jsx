@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { DataTable } from '@khalyx/ui';
 import { api, money } from '../api/client.js';
 import Field from '../components/Field.jsx';
+import { useLive } from '../hooks/useLive.js';
 
 export default function Orders() {
   const [status, setStatus] = useState('');
@@ -14,9 +15,10 @@ export default function Orders() {
 
   const load = () => api.get('/admin/orders', { params: { status, q, channel, from, to } }).then(({ data: d }) => setData(d));
 
+  useLive(load, 5000);
   useEffect(() => {
     load();
-  }, []);
+  }, [status, channel, from, to, q]);
 
   return (
     <>

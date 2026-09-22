@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Order } from '../../models/Order.js';
 import { User } from '../../models/User.js';
 import { Reconciliation } from '../../models/Reconciliation.js';
+import { sendCsv, sendExcel } from '../../utils/csv.js';
 
 const router = Router();
 const COUNTED = { status: { $in: ['paid', 'processing', 'shipped', 'delivered'] } };
@@ -106,6 +107,44 @@ router.get('/staff-sales', async (req, res) => {
       orders: r.orders
     }))
   });
+});
+
+router.get('/sales', async (req, res) => {
+  const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 7 * 864e5);
+  const to = req.query.to ? new Date(req.query.to) : new Date();
+  to.setHours(23, 59, 59, 999);
+  const match = { ...COUNTED, paidAt: { $gte: from, $lte: to } };
+  if (req.query.channel) match.channel = req.query.channel;
+  const orders = await Order.find(match).sort({ paidAt: -1 });
+  const rows = [];
+  for (const order of orders) {
+    for (const item of order.items) {
+      rows.push({
+        date: order.paidAt ? order.paidAt.toISOString().slice(0, 10) : '',
+        orderNumber: order.orderNumber,
+        channel: order.channel,
+        status: order.status,
+        sku: item.sku,
+        name: item.name,
+        qty: item.qty,
+        unitPrice: item.price,
+        lineTotal: item.price * item.qty,
+        orderTotal: order.total
+      });
+    }
+  }
+  const summary = rows.reduce(
+    (acc, row) => {
+      acc.revenue += Number(row.lineTotal) || 0;
+      acc.units += Number(row.qty) || 0;
+      acc.lines += 1;
+      return acc;
+    },
+    { revenue: 0, units: 0, lines: 0, orders: new Set(rows.map((r) => r.orderNumber)).size }
+  );
+  if (req.query.format === 'excel') return sendExcel(res, `erp-sales-${Date.now()}.xls`, rows, 'Sales');
+  if (req.query.format === 'csv') return sendCsv(res, `erp-sales-${Date.now()}.csv`, rows);
+  res.json({ rows, summary });
 });
 
 export default router;

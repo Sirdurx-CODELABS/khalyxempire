@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { userHasApp, appsFor, accessFromApps, APPS } from '@khalyx/shared';
+import { userHasApp, appsFor, accessFromApps, APPS, ROLES } from '@khalyx/shared';
 import { User } from '../models/User.js';
 import { HttpError } from '../middleware/error.js';
 import { optionalAuth, protect, setAuthCookie, signToken, guestIdFrom } from '../middleware/auth.js';
 import { mergeGuestCart } from '../services/cart.js';
 import { auth0Enabled, beginGoogleLogin, finishGoogleLogin } from '../services/auth0.js';
-import { ROLES } from '@khalyx/shared';
+import { env } from '../config/env.js';
 import { Product } from '../models/Product.js';
 import {
   findAuthToken,
@@ -104,12 +104,25 @@ router.post('/login', async (req, res) => {
 
 router.get('/methods', (_req, res) => {
   const google = auth0Enabled();
+  const callbackUrl = env.auth0CallbackUrl;
+  const clientUrl = env.clientUrl.replace(/\/$/, '');
+  const apiPublicUrl = env.apiPublicUrl.replace(/\/$/, '');
   res.json({
     google,
-    callbackUrl: process.env.AUTH0_CALLBACK_URL || '',
+    callbackUrl,
+    clientUrl,
+    apiPublicUrl,
+    domain: env.auth0Domain || '',
+    authorizeUrl: google ? `${apiPublicUrl}/api/auth/google` : '',
+    auth0Dashboard: {
+      allowedCallbackUrls: [callbackUrl],
+      allowedLogoutUrls: [clientUrl, `${clientUrl}/`],
+      allowedWebOrigins: [clientUrl],
+      applicationLoginUri: `${clientUrl}/login`
+    },
     hint: google
-      ? ''
-      : 'Add AUTH0_DOMAIN, AUTH0_CLIENT_ID, and AUTH0_CLIENT_SECRET to server/.env, set Allowed Callback URL to AUTH0_CALLBACK_URL, enable Google, then restart the API.'
+      ? `In Auth0 → Applications → Settings, Allowed Callback URLs must include exactly: ${callbackUrl}`
+      : 'Add AUTH0_DOMAIN, AUTH0_CLIENT_ID, and AUTH0_CLIENT_SECRET to server/.env, set AUTH0_CALLBACK_URL to your API /api/auth/auth0/callback, enable Google, then restart the API.'
   });
 });
 

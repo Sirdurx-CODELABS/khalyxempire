@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { AuthButton, AuthError, AuthField, AuthShell, rememberEmail, rememberedEmail } from '@khalyx/auth-ui';
+import { AuthButton, AuthError, AuthField, AuthShell, PasswordInput, rememberEmail, rememberedEmail } from '@khalyx/auth-ui';
 import { useErpAuth } from '../store/authStore.js';
 
 const logoSrc = `${import.meta.env.BASE_URL}brand/logo.png`;
@@ -49,8 +49,8 @@ export default function Login() {
         <AuthError>{error}</AuthError>
         {mode === 'pin' ? (
           <AuthField label="Staff PIN">
-            <input
-              className="auth-pin"
+            <PasswordInput
+              inputClassName="auth-pin"
               inputMode="numeric"
               autoComplete="off"
               required
@@ -70,8 +70,7 @@ export default function Login() {
               />
             </AuthField>
             <AuthField label="Password">
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="current-password"
                 required
                 value={form.password}

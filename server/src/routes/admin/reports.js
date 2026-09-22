@@ -5,7 +5,7 @@ import { User } from '../../models/User.js';
 import { ClockEntry } from '../../models/ClockEntry.js';
 import { Reconciliation } from '../../models/Reconciliation.js';
 import { requirePermission } from '../../middleware/admin.js';
-import { sendCsv } from '../../utils/csv.js';
+import { sendCsv, sendExcel } from '../../utils/csv.js';
 
 const router = Router();
 router.use(requirePermission('reports'));
@@ -77,7 +77,10 @@ router.get('/sales', async (req, res) => {
   );
   summary.profit = summary.revenue - summary.cost;
 
-  if (format === 'csv' || format === 'excel') {
+  if (format === 'excel') {
+    return sendExcel(res, `khalyx-sales-${Date.now()}.xls`, rows, 'Sales');
+  }
+  if (format === 'csv') {
     return sendCsv(res, `khalyx-sales-${Date.now()}.csv`, rows);
   }
 

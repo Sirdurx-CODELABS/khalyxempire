@@ -165,7 +165,8 @@
   font-weight: 600;
 }
 
-.auth-field input {
+.auth-field input,
+.auth-field .password-input input {
   width: 100%;
   border: 1px solid #e6ddcc;
   background: #fff;
@@ -177,12 +178,18 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.auth-field input:focus {
+.auth-field .password-input input {
+  padding-right: 4.25rem;
+}
+
+.auth-field input:focus,
+.auth-field .password-input input:focus {
   border-color: #d4af37;
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
 }
 
-.auth-field input.auth-pin {
+.auth-field input.auth-pin,
+.auth-field .password-input input.auth-pin {
   letter-spacing: 0.4em;
   font-size: 22px;
   text-align: center;

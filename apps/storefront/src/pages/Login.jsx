@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { PasswordInput } from '@khalyx/ui';
 import { useAuth } from '../store/authStore.js';
 import { useCart } from '../store/cartStore.js';
 import Seo from '../components/Seo.jsx';
@@ -35,7 +36,7 @@ export default function Login() {
         <GoogleSignIn next={next} />
         <p className="or-line">or sign in with email</p>
         <input type="email" required placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <input type="password" required placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <PasswordInput required placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         <button className="btn full" type="submit">
           Continue
         </button>

@@ -1,12 +1,27 @@
 import axios from 'axios';
 
-function resolveApiBase() {
+function resolveApiOrigin() {
   const explicit = import.meta.env.VITE_API_URL;
-  if (explicit) return `${String(explicit).replace(/\/$/, '')}/api`;
+  if (explicit) return String(explicit).replace(/\/$/, '');
   if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
-    return 'http://localhost:5000/api';
+    return 'http://localhost:5000';
   }
+  // Dev: hit Express directly so Auth0 cookies + callback stay on the API host.
+  if (import.meta.env.DEV) return 'http://localhost:5000';
+  return '';
+}
+
+function resolveApiBase() {
+  const origin = resolveApiOrigin();
+  if (origin) return `${origin}/api`;
   return '/api';
+}
+
+/** Absolute URL for browser navigations (OAuth) that must leave the Vite/Vercel origin. */
+export function apiAbsoluteUrl(path) {
+  const origin = resolveApiOrigin() || (typeof window !== 'undefined' ? window.location.origin : '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${origin}${p}`;
 }
 
 function guestId() {

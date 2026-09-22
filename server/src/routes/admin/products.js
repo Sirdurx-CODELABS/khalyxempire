@@ -106,10 +106,12 @@ async function salesFor(productId) {
 }
 
 router.get('/', async (req, res) => {
-  const { q, category, page = 1, limit = 100, status, supplier } = req.query;
+  const { q, category, page = 1, limit = 100, status, supplier, newArrival, featured } = req.query;
   const filter = catalogFilter(q, { activeOnly: false });
   if (category) filter.category = category;
   if (supplier) filter.suppliers = supplier;
+  if (newArrival === 'true') filter.newArrival = true;
+  if (featured === 'true') filter.featured = true;
   if (status === 'draft') filter.status = 'draft';
   if (status === 'active') filter.status = { $ne: 'draft' };
   const skip = (Math.max(1, Number(page)) - 1) * Number(limit);

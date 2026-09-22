@@ -259,10 +259,10 @@ export default function ProductForm() {
             </div>
           </Field>
           <label className="check">
-            <input type="checkbox" checked={form.featured} onChange={set('featured')} /> Featured
+            <input type="checkbox" checked={form.featured} onChange={set('featured')} /> Featured (homepage grid)
           </label>
           <label className="check">
-            <input type="checkbox" checked={form.newArrival} onChange={set('newArrival')} /> New arrival
+            <input type="checkbox" checked={form.newArrival} onChange={set('newArrival')} /> New arrival (storefront hero)
           </label>
         </div>
         <div className="panel form-grid">

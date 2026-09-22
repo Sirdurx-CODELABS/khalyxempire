@@ -31,7 +31,9 @@ export const env = {
   auth0Domain: (process.env.AUTH0_DOMAIN || '').replace(/^https?:\/\//, '').replace(/\/$/, ''),
   auth0ClientId: process.env.AUTH0_CLIENT_ID || '',
   auth0ClientSecret: process.env.AUTH0_CLIENT_SECRET || '',
+  // Callback MUST hit the Express API (not Vercel). Vite/local and Render both serve /api/auth/*.
   auth0CallbackUrl:
-    process.env.AUTH0_CALLBACK_URL || `${process.env.CLIENT_URL || 'http://localhost:5173'}/api/auth/auth0/callback`,
+    process.env.AUTH0_CALLBACK_URL ||
+    `${process.env.API_PUBLIC_URL || `http://localhost:${Number(process.env.PORT) || 5000}`}/api/auth/auth0/callback`,
   apiPublicUrl: process.env.API_PUBLIC_URL || `http://localhost:${Number(process.env.PORT) || 5000}`
 };

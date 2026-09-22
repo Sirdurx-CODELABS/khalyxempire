@@ -14,6 +14,11 @@ import PurchaseOrders from './pages/PurchaseOrders.jsx';
 import Clock from './pages/Clock.jsx';
 import Reconciliation from './pages/Reconciliation.jsx';
 import Labels from './pages/Labels.jsx';
+import Inventory from './pages/Inventory.jsx';
+import InventoryView from './pages/InventoryView.jsx';
+import Orders from './pages/Orders.jsx';
+import OrderDetail from './pages/OrderDetail.jsx';
+import Reports from './pages/Reports.jsx';
 
 export default function App() {
   const hydrate = useErpAuth((s) => s.hydrate);
@@ -47,10 +52,15 @@ export default function App() {
         }
       >
         <Route index element={<Pos />} />
+        <Route path="orders" element={<Orders />} />
+        <Route path="orders/:orderNumber" element={<OrderDetail />} />
+        <Route path="inventory" element={<Inventory />} />
+        <Route path="inventory/:id" element={<InventoryView />} />
         <Route path="suppliers" element={<Suppliers />} />
         <Route path="purchase-orders" element={<PurchaseOrders />} />
         <Route path="clock" element={<Clock />} />
         <Route path="reconciliation" element={<Reconciliation />} />
+        <Route path="reports" element={<Reports />} />
         <Route path="labels" element={<Labels />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

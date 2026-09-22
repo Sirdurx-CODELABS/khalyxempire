@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PasswordInput } from '@khalyx/ui';
 import { api } from '../api/client.js';
 import { useAuth } from '../store/authStore.js';
 
@@ -92,8 +93,7 @@ export default function Profile() {
       {user?.hasPassword ? (
         <>
           <label className="field-label">Current password</label>
-          <input
-            type="password"
+          <PasswordInput
             autoComplete="current-password"
             value={form.currentPassword}
             onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
@@ -102,8 +102,7 @@ export default function Profile() {
         </>
       ) : null}
       <label className="field-label">New password</label>
-      <input
-        type="password"
+      <PasswordInput
         minLength={8}
         autoComplete="new-password"
         value={form.password}
@@ -111,8 +110,7 @@ export default function Profile() {
         placeholder="Leave blank to keep current"
       />
       <label className="field-label">Confirm new password</label>
-      <input
-        type="password"
+      <PasswordInput
         minLength={8}
         autoComplete="new-password"
         value={form.confirm}

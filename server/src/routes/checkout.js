@@ -3,7 +3,7 @@ import { optionalAuth, guestIdFrom } from '../middleware/auth.js';
 import { HttpError } from '../middleware/error.js';
 import { getCartDoc } from '../services/cart.js';
 import { createCheckout, publicOrder } from '../services/orders.js';
-import { applyCoupon, totals } from '../services/pricing.js';
+import { applyCoupon, totalsWithSettings } from '../services/pricing.js';
 import { paymentOptions } from '../services/payment/index.js';
 
 const router = Router();
@@ -19,9 +19,9 @@ router.post('/preview', async (req, res) => {
   const subtotal = cart.items.reduce((sum, i) => sum + i.price * i.qty, 0);
   try {
     const { discount, coupon } = await applyCoupon(req.body.couponCode, subtotal);
-    res.json({ ...totals({ subtotal, discount }), coupon: coupon?.code || '' });
+    res.json({ ...(await totalsWithSettings({ subtotal, discount })), coupon: coupon?.code || '' });
   } catch (err) {
-    res.json({ ...totals({ subtotal, discount: 0 }), coupon: '', error: err.message });
+    res.json({ ...(await totalsWithSettings({ subtotal, discount: 0 })), coupon: '', error: err.message });
   }
 });
 

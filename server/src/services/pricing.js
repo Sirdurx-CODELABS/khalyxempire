@@ -1,10 +1,14 @@
 import { Coupon } from '../models/Coupon.js';
 import { env } from '../config/env.js';
 import { HttpError } from '../middleware/error.js';
+import { getStoreSettings, publicStoreProfile } from './settings.js';
 
-export function shippingFor(subtotal) {
-  if (subtotal >= env.freeShippingThreshold) return 0;
-  return env.shippingFee;
+export function shippingFor(subtotal, store = null) {
+  const fee = store?.shippingFee != null ? Number(store.shippingFee) : env.shippingFee;
+  const freeAt =
+    store?.freeShippingThreshold != null ? Number(store.freeShippingThreshold) : env.freeShippingThreshold;
+  if (subtotal >= freeAt) return 0;
+  return Math.max(0, fee);
 }
 
 export async function applyCoupon(code, subtotal, items = []) {
@@ -31,8 +35,14 @@ export async function applyCoupon(code, subtotal, items = []) {
   return { discount, coupon };
 }
 
-export function totals({ subtotal, discount = 0 }) {
-  const shippingFee = shippingFor(Math.max(0, subtotal - discount));
+export function totals({ subtotal, discount = 0, store = null }) {
+  const shippingFee = shippingFor(Math.max(0, subtotal - discount), store);
   const total = Math.max(0, subtotal - discount + shippingFee);
   return { subtotal, discount, shippingFee, total };
+}
+
+export async function totalsWithSettings({ subtotal, discount = 0 }) {
+  const settings = await getStoreSettings();
+  const { store } = publicStoreProfile(settings);
+  return totals({ subtotal, discount, store });
 }
