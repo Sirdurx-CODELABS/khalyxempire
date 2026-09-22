@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "vercel-build": "vite build"
   },
   "dependencies": {
+    "@khalyx/auth-ui": "*",
     "@khalyx/shared": "*",
+    "@khalyx/ui": "*",
     "axios": "^1.7.9",
     "jsbarcode": "^3.12.3",
     "react": "^18.3.1",

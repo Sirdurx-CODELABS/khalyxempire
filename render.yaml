@@ -1,0 +1,27 @@
+# Render Blueprint — API only (do not start Vite frontends here)
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: khalyx-api
+    runtime: node
+    plan: free
+    # Root Directory: leave EMPTY on the Render dashboard (monorepo root).
+    # Start Command MUST be npm start — never npm run dev (that boots 4 apps and OOMs).
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false
+      - key: ADMIN_URL
+        sync: false
+      - key: ERP_URL
+        sync: false
+      - key: API_PUBLIC_URL
+        sync: false

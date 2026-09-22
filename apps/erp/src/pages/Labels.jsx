@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { DataTable } from '@khalyx/ui';
 import { api } from '../api/client.js';
 import { BarcodeSticker } from '../components/BarcodeSticker.jsx';
+import Field from '../components/Field.jsx';
 
 export default function Labels() {
   const [q, setQ] = useState('');
@@ -31,42 +33,61 @@ export default function Labels() {
     <>
       <div className="page-head no-print">
         <h1>Barcode labels</h1>
-        <button className="btn" type="button" disabled={!active?.labels?.length} onClick={() => window.print()}>
+        <button
+          className="btn"
+          type="button"
+          disabled={!active?.labels?.length}
+          onClick={async () => {
+            window.print();
+            if (active?.id) await api.patch(`/erp/labels/${active.id}/printed`).catch(() => {});
+          }}
+        >
           Print
         </button>
       </div>
       {error ? <p className="alert no-print">{error}</p> : null}
       <div className="toolbar no-print">
-        <input placeholder="Search sheets saved in admin" value={q} onChange={(e) => setQ(e.target.value)} />
+        <Field label="Search sheets">
+          <input value={q} onChange={(e) => setQ(e.target.value)} />
+        </Field>
         <button className="btn ghost" type="button" onClick={() => loadBatches(q)}>
           Load
         </button>
       </div>
-      <div className="no-print" style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
-        {batches.length === 0 ? <p className="muted">No label sheets yet. Create them in Admin → Barcode labels.</p> : null}
-        {batches.map((batch) => (
-          <button
-            key={batch.id}
-            className="hit"
-            type="button"
-            onClick={() => openBatch(batch.id)}
-            style={{ borderColor: active?.id === batch.id ? 'var(--gold)' : undefined }}
-          >
-            <span>
-              <strong>{batch.name}</strong>
-              <div className="muted">
-                {batch.stickerCount} stickers · {new Date(batch.createdAt).toLocaleString()}
-              </div>
-            </span>
-          </button>
-        ))}
+      <div className="no-print">
+        <DataTable
+          rows={batches}
+          rowKey={(b) => b.id}
+          searchKeys={['name']}
+          empty="No label sheets yet. Create them in Admin → Barcode labels."
+          columns={[
+            { id: 'name', header: 'Sheet', accessor: (b) => b.name, cell: (b) => <strong>{b.name}</strong> },
+            { id: 'stickerCount', header: 'Stickers', accessor: (b) => b.stickerCount },
+            {
+              id: 'createdAt',
+              header: 'Created',
+              accessor: (b) => b.createdAt,
+              cell: (b) => new Date(b.createdAt).toLocaleString()
+            },
+            {
+              id: 'actions',
+              header: 'Actions',
+              sortable: false,
+              cell: (b) => (
+                <button className={`btn small ${active?.id === b.id ? '' : 'ghost'}`} type="button" onClick={() => openBatch(b.id)}>
+                  {active?.id === b.id ? 'Loaded' : 'Open'}
+                </button>
+              )
+            }
+          ]}
+        />
       </div>
       {active ? (
         <p className="muted no-print">
           Loaded from admin: {active.name}
         </p>
       ) : null}
-      <div className="labels">
+      <div className={`labels size-${active?.labelSize || '50x30'}`}>
         {(active?.labels || []).map((item, index) => (
           <BarcodeSticker key={`${item.variantId}-${item.copyIndex || index}`} item={item} />
         ))}

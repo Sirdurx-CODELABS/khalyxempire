@@ -17,6 +17,9 @@ export const useAuth = create((set, get) => ({
       set({ user: null, ready: true });
     }
   },
+  setUser(user) {
+    set({ user });
+  },
   async login(payload) {
     const { data } = await api.post('/auth/login', { ...payload, app: 'storefront' });
     if (data.user && !data.user.apps?.includes('storefront') && data.user.role !== 'customer') {

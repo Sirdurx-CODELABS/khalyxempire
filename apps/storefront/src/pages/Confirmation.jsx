@@ -15,11 +15,11 @@ export default function Confirmation() {
     const email = params.get('email') || sessionStorage.getItem('khalyx_order_email') || '';
     const run = async () => {
       try {
-        if (params.get('paid') && (params.get('reference') || params.get('transaction_id'))) {
+        if (params.get('paid') && (params.get('reference') || params.get('trxref') || params.get('transaction_id') || params.get('tx_ref'))) {
           await api.get('/payments/verify', {
             params: {
               provider: params.get('provider') || (params.get('transaction_id') ? 'flutterwave' : 'paystack'),
-              reference: params.get('reference'),
+              reference: params.get('reference') || params.get('trxref') || params.get('tx_ref'),
               transaction_id: params.get('transaction_id')
             }
           });

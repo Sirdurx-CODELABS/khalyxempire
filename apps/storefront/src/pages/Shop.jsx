@@ -23,6 +23,7 @@ export default function Shop() {
       size: params.get('size') || '',
       color: params.get('color') || '',
       sort: params.get('sort') || 'newest',
+      newArrival: params.get('newArrival') || '',
       page: params.get('page') || 1
     }),
     [params, category]
@@ -33,13 +34,17 @@ export default function Shop() {
   }, []);
 
   useEffect(() => {
-    api
-      .get('/products', { params: { ...query, limit: 12 } })
-      .then(({ data: d }) => {
-        setData(d);
-        setError('');
-      })
-      .catch(() => setError('Could not load products from the server.'));
+    const load = () =>
+      api
+        .get('/products', { params: { ...query, limit: 12 } })
+        .then(({ data: d }) => {
+          setData(d);
+          setError('');
+        })
+        .catch(() => setError('Could not load products from the server.'));
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
   }, [query]);
 
   const set = (key, value) => {

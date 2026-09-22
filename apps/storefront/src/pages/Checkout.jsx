@@ -26,6 +26,8 @@ export default function Checkout() {
   const [couponCode, setCouponCode] = useState('');
   const [preview, setPreview] = useState(null);
   const [providers, setProviders] = useState(['simulate']);
+  const [providerDetails, setProviderDetails] = useState([]);
+  const [paymentMode, setPaymentMode] = useState('simulate');
   const [provider, setProvider] = useState('simulate');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,8 +35,11 @@ export default function Checkout() {
   useEffect(() => {
     refresh();
     api.get('/checkout/options').then(({ data }) => {
-      setProviders(data.providers);
-      setProvider(data.providers[0]);
+      const list = data.providers?.length ? data.providers : ['simulate'];
+      setProviders(list);
+      setProviderDetails(data.details || []);
+      setPaymentMode(data.mode || 'simulate');
+      setProvider(list[0]);
     });
   }, [refresh]);
 
@@ -155,13 +160,28 @@ export default function Checkout() {
             <input required placeholder="State" value={form.state} onChange={set('state')} />
           </div>
           <h3>Pay</h3>
+          {paymentMode === 'simulate' ? (
+            <p className="muted">
+              Live Paystack / Flutterwave keys are not in <code>server/.env</code> yet — checkout uses test payment until you add them.
+            </p>
+          ) : (
+            <p className="muted">Pay securely with your selected provider. You will be redirected to complete payment.</p>
+          )}
           <div className="chip-row">
-            {providers.map((p) => (
-              <button key={p} type="button" className={`chip ${provider === p ? 'on' : ''}`} onClick={() => setProvider(p)}>
-                {p === 'simulate' ? 'Test payment' : p}
+            {(providerDetails.length ? providerDetails : providers.map((p) => ({ id: p, label: p }))).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`chip ${provider === p.id ? 'on' : ''}`}
+                onClick={() => setProvider(p.id)}
+              >
+                {p.label || (p.id === 'simulate' ? 'Test payment' : p.id)}
               </button>
             ))}
           </div>
+          {providerDetails.find((p) => p.id === provider)?.note ? (
+            <p className="muted">{providerDetails.find((p) => p.id === provider).note}</p>
+          ) : null}
           <button className="btn full" disabled={busy} type="submit">
             {busy ? 'Placing…' : `Pay ${money(totals.total)}`}
           </button>

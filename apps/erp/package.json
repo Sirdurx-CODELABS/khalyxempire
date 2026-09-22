@@ -8,10 +8,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "vercel-build": "vite build",
     "electron": "electron ."
   },
   "dependencies": {
+    "@khalyx/auth-ui": "*",
     "@khalyx/shared": "*",
+    "@khalyx/ui": "*",
     "axios": "^1.7.9",
     "jsbarcode": "^3.11.6",
     "react": "^18.3.1",

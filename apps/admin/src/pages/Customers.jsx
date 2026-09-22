@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, money } from '../api/client.js';
+import { DataTable } from '@khalyx/ui';
+import { api, money, downloadFile } from '../api/client.js';
 import Field from '../components/Field.jsx';
 
 export default function Customers() {
@@ -17,37 +18,35 @@ export default function Customers() {
     <>
       <div className="page-head">
         <h1>Customers</h1>
+        <button className="btn ghost" type="button" onClick={() => downloadFile('/admin/customers/export/csv', 'khalyx-customers.csv')}>
+          Export CSV
+        </button>
       </div>
       <div className="toolbar">
         <Field label="Search customers">
-          <input placeholder="Name, email, or phone" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} />
         </Field>
         <button className="btn ghost" type="button" onClick={load}>
           Search
         </button>
       </div>
-      <table className="data">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Orders</th>
-            <th>Lifetime</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.customers.map((c) => (
-            <tr key={c.id}>
-              <td>
-                <Link to={`/customers/${c.id}`}>{c.name}</Link>
-              </td>
-              <td>{c.email}</td>
-              <td>{c.orderCount}</td>
-              <td>{money(c.lifetimeValue)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        rows={data.customers}
+        rowKey={(c) => c.id}
+        searchKeys={['name', 'email', 'phone']}
+        searchPlaceholder="Name, email, or phone"
+        columns={[
+          {
+            id: 'name',
+            header: 'Name',
+            accessor: (c) => c.name,
+            cell: (c) => <Link to={`/customers/${c.id}`}>{c.name}</Link>
+          },
+          { id: 'email', header: 'Email', accessor: (c) => c.email },
+          { id: 'orderCount', header: 'Orders', accessor: (c) => c.orderCount },
+          { id: 'lifetimeValue', header: 'Lifetime', accessor: (c) => c.lifetimeValue, cell: (c) => money(c.lifetimeValue) }
+        ]}
+      />
     </>
   );
 }

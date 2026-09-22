@@ -6,7 +6,9 @@
     "apps/storefront",
     "apps/admin",
     "apps/erp",
-    "packages/shared"
+    "packages/shared",
+    "packages/auth-ui",
+    "packages/ui"
   ],
   "scripts": {
     "dev": "concurrently -n server,web,admin,erp -c gold,cyan,magenta,green \"npm run dev -w @khalyx/server\" \"npm run dev -w @khalyx/storefront\" \"npm run dev -w @khalyx/admin\" \"npm run dev -w @khalyx/erp\"",
@@ -14,9 +16,14 @@
     "dev:storefront": "npm run dev -w @khalyx/storefront",
     "dev:admin": "npm run dev -w @khalyx/admin",
     "dev:erp": "npm run dev -w @khalyx/erp",
+    "build": "npm run build:storefront && npm run build:admin && npm run build:erp",
+    "build:storefront": "npm run build -w @khalyx/storefront",
+    "build:admin": "npm run build -w @khalyx/admin",
+    "build:erp": "npm run build -w @khalyx/erp",
     "electron:erp": "npm run electron -w @khalyx/erp",
     "seed": "npm run seed -w @khalyx/server",
-    "start": "npm run start -w @khalyx/server"
+    "start": "npm run start -w @khalyx/server",
+    "start:api": "node server/src/index.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

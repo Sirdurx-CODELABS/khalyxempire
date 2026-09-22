@@ -20,6 +20,7 @@ export default function Account() {
         <p className="muted">{user.email}</p>
         <div className="account-nav">
           <Link to="/account">Orders</Link>
+          <Link to="/account/profile">Profile</Link>
           <Link to="/account/addresses">Addresses</Link>
           <Link to="/account/wishlist">Wishlist</Link>
           <button

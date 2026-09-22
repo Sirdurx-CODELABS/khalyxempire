@@ -4,18 +4,25 @@ import { useAdminAuth } from './store/authStore.js';
 import Layout from './components/Layout.jsx';
 import Guard from './components/Guard.jsx';
 import Login from './pages/Login.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
+import InviteAccept from './pages/InviteAccept.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Products from './pages/Products.jsx';
 import ProductForm from './pages/ProductForm.jsx';
+import ProductView from './pages/ProductView.jsx';
 import Orders from './pages/Orders.jsx';
 import OrderDetail from './pages/OrderDetail.jsx';
 import Customers from './pages/Customers.jsx';
 import CustomerDetail from './pages/CustomerDetail.jsx';
 import Inventory from './pages/Inventory.jsx';
+import InventoryView from './pages/InventoryView.jsx';
 import Coupons from './pages/Coupons.jsx';
 import Reports from './pages/Reports.jsx';
 import Staff from './pages/Staff.jsx';
 import Labels from './pages/Labels.jsx';
+import Settings from './pages/Settings.jsx';
+import Suppliers from './pages/Suppliers.jsx';
 
 export default function App() {
   const hydrate = useAdminAuth((s) => s.hydrate);
@@ -26,6 +33,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/invite" element={<InviteAccept />} />
       <Route
         element={
           <Guard>
@@ -33,7 +43,11 @@ export default function App() {
           </Guard>
         }
       >
-        <Route index element={<Dashboard />} />
+        <Route index element={
+          <Guard permission="dashboard">
+            <Dashboard />
+          </Guard>
+        } />
         <Route
           path="products"
           element={
@@ -43,10 +57,26 @@ export default function App() {
           }
         />
         <Route
-          path="products/:id"
+          path="products/new"
           element={
             <Guard permission="products">
               <ProductForm />
+            </Guard>
+          }
+        />
+        <Route
+          path="products/:id/edit"
+          element={
+            <Guard permission="products">
+              <ProductForm />
+            </Guard>
+          }
+        />
+        <Route
+          path="products/:id"
+          element={
+            <Guard permission="products">
+              <ProductView />
             </Guard>
           }
         />
@@ -91,6 +121,22 @@ export default function App() {
           }
         />
         <Route
+          path="inventory/:id"
+          element={
+            <Guard permission="inventory">
+              <InventoryView />
+            </Guard>
+          }
+        />
+        <Route
+          path="suppliers"
+          element={
+            <Guard permission="inventory">
+              <Suppliers />
+            </Guard>
+          }
+        />
+        <Route
           path="labels"
           element={
             <Guard permission="inventory">
@@ -119,6 +165,14 @@ export default function App() {
           element={
             <Guard permission="staff">
               <Staff />
+            </Guard>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <Guard permission="staff">
+              <Settings />
             </Guard>
           }
         />

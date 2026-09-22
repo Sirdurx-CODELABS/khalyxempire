@@ -95,10 +95,14 @@ If Atlas blocks the host, the API falls back to a **local** catalog. That fallba
    | Field | Value |
    | --- | --- |
    | Runtime | Node |
-   | Root directory | *(leave empty — monorepo root)* |
-   | Build command | `npm install` |
-   | Start command | `npm start` |
+   | Root Directory | **Leave empty** (repo root — required for npm workspaces / `@khalyx/shared`) |
+   | Build command | `npm install` (or `npm install --omit=dev`) |
+   | Start command | `npm start` ← **API only**. Never `npm run dev` (that starts storefront+admin+ERP and OOMs on free 512Mi) |
+   | Health check path | `/api/health` |
    | Instance | Free or Starter |
+
+   Your failed deploy log showed `Running 'npm run dev'` and then Out of memory — change **Start Command** on Render to `npm start` and **Manual Deploy → Clear build cache & deploy**.
+
 
 3. Environment variables (API):
 
@@ -151,56 +155,63 @@ That writes the eight product lines into Atlas. Re-running seed **replaces** pro
 
 ---
 
-## 4. Deploy the frontends (Vercel example)
+## 4. Deploy the frontends (Vercel)
 
-Create **three** Vercel projects from the same GitHub repo. Set **Root Directory** per project.
+Create **three** Vercel projects from the same GitHub repo. For each project, set **Root Directory** to that app and leave Framework as Vite.
 
-Each frontend reads `VITE_API_URL` at **build** time (not runtime). After you change it, **redeploy**.
+Each frontend reads `VITE_API_URL` at **build** time. After you change it, **redeploy**.
 
-### Storefront
+`vercel.json` in each app already sets:
+
+| Field | Value |
+| --- | --- |
+| Install Command | `cd ../.. && npm install` (monorepo workspaces) |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Rewrites | SPA → `index.html` |
+
+On the Vercel UI (Build and Output Settings), you can leave the override toggles **off** — `vercel.json` applies. If you override manually, match the table above.
+
+Admin and ERP use `base: '/'` automatically on Vercel (`VERCEL=1`), so open the project root URL (not `/admin/` or `/erp/`). Locally they still use `/admin/` and `/erp/`.
+
+### 1) Storefront
 
 | Setting | Value |
 | --- | --- |
 | Root Directory | `apps/storefront` |
-| Build | `npm run build` |
-| Output | `dist` |
 | Env | `VITE_API_URL=https://YOUR-API.onrender.com` |
 
-Include the workspace so `@khalyx/shared` installs. If the build cannot see workspaces, set Root Directory to the **repo root** and override:
+### 2) Admin
 
-- Build: `npm install && npm run build -w @khalyx/storefront`
-- Output: `apps/storefront/dist`
+| Setting | Value |
+| --- | --- |
+| Root Directory | `apps/admin` |
+| Env | `VITE_API_URL=https://YOUR-API.onrender.com` |
+| Env (optional) | `VITE_ERP_URL=https://YOUR-ERP.vercel.app` |
 
-### Admin
+### 3) ERP
 
-Admin is built with `base: '/admin/'`. Easiest live URL:
+| Setting | Value |
+| --- | --- |
+| Root Directory | `apps/erp` |
+| Env | `VITE_API_URL=https://YOUR-API.onrender.com` |
+| Env (optional) | `VITE_ADMIN_URL=https://YOUR-ADMIN.vercel.app` |
 
-- Own subdomain later: `https://admin.khalyx.ng/` — then change `base` in `apps/admin/vite.config.js` to `'/'` for that deploy, **or**
-- Keep the prefix and open `https://YOUR-ADMIN.vercel.app/admin/`
+Copy examples from each app’s `.env.example`. **Never** commit real `.env` files (blocked by `.gitignore`).
 
-Env: `VITE_API_URL=https://YOUR-API.onrender.com`
+Local build check from repo root:
 
-Add a Vercel rewrite so deep links (`/admin/products`) work:
-
-```json
-{
-  "rewrites": [{ "source": "/admin/:path*", "destination": "/admin/index.html" }]
-}
+```bash
+npm run build:storefront
+npm run build:admin
+npm run build:erp
 ```
 
-If you set `base: '/'`, rewrite to `/index.html` instead.
-
-### ERP
-
-Same pattern as admin (`base: '/erp/'`). URL: `https://YOUR-ERP.vercel.app/erp/`
-
-Env: `VITE_API_URL=https://YOUR-API.onrender.com`
-
-The **Electron** wrapper (`npm run electron:erp`) is for a till PC, not for hosting.
+The **Electron** wrapper (`npm run electron:erp`) is for a till PC, not for Vercel.
 
 ### Netlify / Cloudflare Pages
 
-Same idea: root directory + `npm run build` + `dist` + `VITE_API_URL`. Add SPA redirects (`/*` → `index.html`) so React Router does not 404 on refresh.
+Same idea: root directory + install from monorepo root + `npm run build` + `dist` + `VITE_API_URL`. Add SPA redirects (`/*` → `index.html`).
 
 ---
 
@@ -248,8 +259,14 @@ Cloudflare DNS in **proxy** (orange cloud) is fine in front of Vercel/Render.
 
 **Paystack / Flutterwave**
 
-- Start with test keys.
-- Dashboard webhook URL: `https://YOUR-API/api/payments/paystack/webhook` and `https://YOUR-API/api/payments/flutterwave/webhook`.
+- Start with test keys in `server/.env`.
+- Dashboard webhook URLs (must be publicly reachable HTTPS in production):
+  - Paystack: `https://YOUR-API/api/payments/paystack/webhook`
+  - Flutterwave: `https://YOUR-API/api/payments/flutterwave/webhook`
+- Flutterwave: copy the **Secret hash** from Settings → Webhooks into `FLUTTERWAVE_WEBHOOK_HASH`.
+- Paystack signs with your secret key (`x-paystack-signature`); no extra hash env var.
+- Set `API_PUBLIC_URL` to your API origin so Admin → Settings shows the correct webhook URLs.
+- Both handlers re-verify the transaction with the provider API and check amount before marking the order paid.
 - Switch to live keys only after KYC.
 
 **Auth0 (Google on the storefront)**

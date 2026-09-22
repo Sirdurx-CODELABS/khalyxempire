@@ -20,16 +20,39 @@ export default function Product() {
   const [qty, setQty] = useState(1);
   const [review, setReview] = useState({ rating: 5, title: '', body: '' });
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [wishBusy, setWishBusy] = useState(false);
 
   useEffect(() => {
-    api.get(`/products/${slug}`).then(({ data }) => {
-      setProduct(data.product);
-      setReviews(data.reviews || []);
-      setVariantId(data.product.variants.find((v) => v.stock > 0)?._id || data.product.variants[0]?._id || '');
-      setImage(0);
-      setQty(1);
-    });
+    let first = true;
+    const load = () =>
+      api.get(`/products/${slug}`).then(({ data }) => {
+        setProduct(data.product);
+        setReviews(data.reviews || []);
+        if (first) {
+          setVariantId(data.product.variants.find((v) => v.stock > 0)?._id || data.product.variants[0]?._id || '');
+          setImage(0);
+          setQty(1);
+          first = false;
+        }
+      });
+    load();
+    const id = setInterval(load, 5000);
+    return () => clearInterval(id);
   }, [slug]);
+
+  useEffect(() => {
+    if (!user || !product?._id) {
+      setSaved(false);
+      return;
+    }
+    api
+      .get('/wishlist')
+      .then(({ data }) => {
+        setSaved((data.products || []).some((p) => String(p._id) === String(product._id)));
+      })
+      .catch(() => setSaved(false));
+  }, [user, product?._id]);
 
   const variant = useMemo(() => product?.variants.find((v) => v._id === variantId), [product, variantId]);
   const sizes = [...new Set(product?.variants.map((v) => v.size).filter(Boolean) || [])];
@@ -86,7 +109,21 @@ export default function Product() {
 
   const wish = async () => {
     if (!user) return;
-    await api.post(`/wishlist/${product._id}`);
+    setWishBusy(true);
+    setError('');
+    try {
+      if (saved) {
+        await api.delete(`/wishlist/${product._id}`);
+        setSaved(false);
+      } else {
+        await api.post(`/wishlist/${product._id}`);
+        setSaved(true);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not update wishlist');
+    } finally {
+      setWishBusy(false);
+    }
   };
 
   const submitReview = async (e) => {
@@ -198,8 +235,8 @@ export default function Product() {
             {variant?.stock ? 'Add to bag' : 'Sold out'}
           </button>
           {user ? (
-            <button className="btn ghost full" style={{ marginTop: 8 }} type="button" onClick={wish}>
-              Save to wishlist
+            <button className="btn ghost full" style={{ marginTop: 8 }} type="button" onClick={wish} disabled={wishBusy}>
+              {wishBusy ? 'Saving…' : saved ? 'Remove from wishlist' : 'Save to wishlist'}
             </button>
           ) : (
             <p className="muted" style={{ marginTop: 12 }}>

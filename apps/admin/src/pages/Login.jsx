@@ -1,43 +1,76 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { AuthButton, AuthError, AuthField, AuthShell, rememberEmail, rememberedEmail } from '@khalyx/auth-ui';
 import { useAdminAuth } from '../store/authStore.js';
-import Field from '../components/Field.jsx';
+
+const logoSrc = `${import.meta.env.BASE_URL}brand/logo.png`;
 
 export default function Login() {
   const login = useAdminAuth((s) => s.login);
+  const user = useAdminAuth((s) => s.user);
+  const ready = useAdminAuth((s) => s.ready);
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: 'admin@khalyx.ng', password: 'KhalyxAdmin!23' });
+  const remembered = rememberedEmail('admin');
+  const [form, setForm] = useState({ email: remembered, password: '', remember: Boolean(remembered) });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  if (ready && user) return <Navigate to="/" replace />;
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     try {
-      await login(form);
+      rememberEmail('admin', form.email, form.remember);
+      await login({ email: form.email, password: form.password });
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Could not sign in');
+      setError(err.response?.data?.message || err.message || 'Wrong email or password');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="login-page">
-      <form className="login-card form-grid" onSubmit={submit}>
-        <p className="muted" style={{ letterSpacing: '0.28em', textTransform: 'uppercase', margin: 0 }}>
-          Khalyx Empire
-        </p>
-        <h1>Store admin</h1>
-        {error ? <p className="alert">{error}</p> : null}
-        <Field label="Email">
-          <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        </Field>
-        <Field label="Password">
-          <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-        </Field>
-        <button className="btn" type="submit">
-          Sign in
-        </button>
+    <AuthShell badge="Admin Portal" logoSrc={logoSrc}>
+      <h1>Welcome back</h1>
+      <p className="auth-lead">Sign in to the Khalyx Empire command centre.</p>
+      <form className="auth-form" onSubmit={submit}>
+        <AuthError>{error}</AuthError>
+        <AuthField label="Email">
+          <input
+            type="email"
+            autoComplete="username"
+            required
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+        </AuthField>
+        <AuthField label="Password">
+          <input
+            type="password"
+            autoComplete="current-password"
+            required
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+          />
+        </AuthField>
+        <div className="auth-row">
+          <label className="auth-check">
+            <input
+              type="checkbox"
+              checked={form.remember}
+              onChange={(e) => setForm({ ...form, remember: e.target.checked })}
+            />
+            Remember me
+          </label>
+          <Link className="auth-link" to="/forgot-password">
+            Forgot password?
+          </Link>
+        </div>
+        <AuthButton loading={loading}>Sign in</AuthButton>
       </form>
-    </div>
+    </AuthShell>
   );
 }

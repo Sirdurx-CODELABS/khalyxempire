@@ -5,6 +5,9 @@ import { useOffline } from './store/offlineStore.js';
 import Guard from './components/Guard.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
+import InviteAccept from './pages/InviteAccept.jsx';
 import Pos from './pages/Pos.jsx';
 import Suppliers from './pages/Suppliers.jsx';
 import PurchaseOrders from './pages/PurchaseOrders.jsx';
@@ -33,6 +36,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/invite" element={<InviteAccept />} />
       <Route
         element={
           <Guard>

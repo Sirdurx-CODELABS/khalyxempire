@@ -1,0 +1,13 @@
+{
+  "name": "@khalyx/ui",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.jsx",
+  "exports": {
+    ".": "./src/index.jsx"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-router-dom": ">=6"
+  }
+}

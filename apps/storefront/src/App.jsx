@@ -13,6 +13,7 @@ import Account from './pages/Account.jsx';
 import Orders from './pages/Orders.jsx';
 import Addresses from './pages/Addresses.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import Profile from './pages/Profile.jsx';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/account" element={<Account />}>
           <Route index element={<Orders />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="addresses" element={<Addresses />} />
           <Route path="wishlist" element={<Wishlist />} />
         </Route>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DataTable } from '@khalyx/ui';
 import { api, money } from '../api/client.js';
 import { BarcodeSticker } from '../components/BarcodeSticker.jsx';
 import Field from '../components/Field.jsx';
@@ -6,6 +7,7 @@ import Field from '../components/Field.jsx';
 export default function Labels() {
   const [q, setQ] = useState('');
   const [name, setName] = useState('');
+  const [labelSize, setLabelSize] = useState('50x30');
   const [hits, setHits] = useState([]);
   const [draft, setDraft] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -72,12 +74,29 @@ export default function Labels() {
     [draft]
   );
 
+  const hitRows = useMemo(
+    () =>
+      hits.flatMap((product) =>
+        (product.variants || []).map((variant) => ({
+          id: variant._id,
+          product,
+          variant,
+          productName: product.name,
+          variantLabel: [variant.size, variant.color].filter(Boolean).join(' / ') || 'OS',
+          price: variant.price,
+          barcode: variant.barcode || variant.sku
+        }))
+      ),
+    [hits]
+  );
+
   const save = async () => {
     setError('');
     setMessage('');
     try {
       const { data } = await api.post('/admin/labels', {
         name: name || `Labels ${new Date().toLocaleDateString('en-NG')}`,
+        labelSize,
         selection: draft.map((row) => ({
           productId: row.productId,
           variantId: row.variantId,
@@ -121,82 +140,95 @@ export default function Labels() {
         <div>
           <div className="toolbar">
             <Field label="Search products">
-              <input placeholder="Name, SKU, or barcode" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} />
             </Field>
           </div>
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Variant</th>
-                <th>Barcode</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {hits.flatMap((product) =>
-                (product.variants || []).map((variant) => (
-                  <tr key={variant._id}>
-                    <td>
-                      <strong>{product.name}</strong>
-                    </td>
-                    <td>
-                      {[variant.size, variant.color].filter(Boolean).join(' / ') || 'OS'} · {money(variant.price)}
-                    </td>
-                    <td>{variant.barcode || variant.sku}</td>
-                    <td>
-                      <button className="btn small" type="button" onClick={() => addVariant(product, variant)}>
-                        Add
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            rows={hitRows}
+            rowKey={(r) => r.id}
+            searchKeys={['productName', 'barcode', 'variantLabel']}
+            searchPlaceholder="Filter results"
+            empty="Search above to add variants to this sheet."
+            columns={[
+              { id: 'productName', header: 'Product', accessor: (r) => r.productName, cell: (r) => <strong>{r.productName}</strong> },
+              {
+                id: 'variantLabel',
+                header: 'Variant',
+                accessor: (r) => r.variantLabel,
+                cell: (r) => (
+                  <>
+                    {r.variantLabel} · {money(r.price)}
+                  </>
+                )
+              },
+              { id: 'barcode', header: 'Barcode', accessor: (r) => r.barcode },
+              {
+                id: 'actions',
+                header: 'Actions',
+                sortable: false,
+                cell: (r) => (
+                  <button className="btn small" type="button" onClick={() => addVariant(r.product, r.variant)}>
+                    Add
+                  </button>
+                )
+              }
+            ]}
+          />
 
           <h3>This sheet</h3>
           {draft.length === 0 ? <p className="muted">Add products to create barcodes for the shop floor.</p> : null}
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Copies</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {draft.map((row) => (
-                <tr key={row.variantId}>
-                  <td>
-                    <strong>{row.name}</strong>
+          <DataTable
+            rows={draft}
+            rowKey={(r) => r.variantId}
+            searchKeys={['name', 'sku', 'barcode']}
+            empty="No items on this sheet yet."
+            columns={[
+              {
+                id: 'name',
+                header: 'Item',
+                accessor: (r) => r.name,
+                cell: (r) => (
+                  <>
+                    <strong>{r.name}</strong>
                     <div className="muted">
-                      {row.sku} · {row.barcode}
+                      {r.sku} · {r.barcode}
                     </div>
-                  </td>
-                  <td>
-                    <Field label="Copies">
-                      <input
-                        type="number"
-                        min="1"
-                        value={row.copies}
-                        onChange={(e) => setCopies(row.variantId, Number(e.target.value))}
-                        style={{ width: 80 }}
-                      />
-                    </Field>
-                  </td>
-                  <td>
-                    <button className="btn small danger" type="button" onClick={() => setCopies(row.variantId, 0)}>
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </>
+                )
+              },
+              {
+                id: 'copies',
+                header: 'Copies',
+                accessor: (r) => r.copies,
+                cell: (r) => (
+                  <Field label="Copies">
+                    <input type="number" min="1" value={r.copies} onChange={(e) => setCopies(r.variantId, Number(e.target.value))} style={{ width: 80 }} />
+                  </Field>
+                )
+              },
+              {
+                id: 'actions',
+                header: 'Actions',
+                sortable: false,
+                cell: (r) => (
+                  <button className="btn small danger" type="button" onClick={() => setCopies(r.variantId, 0)}>
+                    Remove
+                  </button>
+                )
+              }
+            ]}
+          />
           <div className="toolbar">
             <Field label="Sheet name">
-              <input placeholder="e.g. Hoodie restock" value={name} onChange={(e) => setName(e.target.value)} />
+              <input value={name} onChange={(e) => setName(e.target.value)} />
+            </Field>
+            <Field label="Label size">
+              <select value={labelSize} onChange={(e) => setLabelSize(e.target.value)}>
+                <option value="50x25">50 × 25 mm</option>
+                <option value="50x30">50 × 30 mm</option>
+                <option value="58x40">58 × 40 mm</option>
+                <option value="80x50">80 × 50 mm</option>
+              </select>
             </Field>
             <button className="btn" type="button" disabled={!draft.length} onClick={save}>
               Save for stores
@@ -220,7 +252,7 @@ export default function Labels() {
         </div>
       </div>
 
-      <div className="labels">
+      <div className={`labels size-${labelSize}`}>
         {stickers.map((item, index) => (
           <BarcodeSticker key={item.key || `${item.variantId}-${item.copyIndex || index}`} item={item} />
         ))}

@@ -1,6 +1,10 @@
 node_modules
 dist
+build
 .env
+.env.*
+!.env.example
+!**/.env.example
 *.log
 .DS_Store
 uploads
@@ -10,3 +14,5 @@ uploads
 .vite
 coverage
 *.local
+.vercel
+server/uploads

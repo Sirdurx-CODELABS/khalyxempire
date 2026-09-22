@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import ProductCard from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
 import { WHATSAPP_GROUP_URL } from '../components/WhatsApp.jsx';
+import { productCover } from '../lib/money.js';
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
@@ -14,15 +15,16 @@ export default function Home() {
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [heroIndex, setHeroIndex] = useState(0);
 
   const loadCatalog = async () => {
-    const { data } = await api.get('/products', { params: { sort: 'newest', limit: 8 } });
+    const { data } = await api.get('/products', { params: { sort: 'newest', limit: 48 } });
     const latest = data.products || [];
-    let featuredList = latest.slice(0, 4);
-    let arrivalList = latest.slice(4, 8);
+    let featuredList = latest.slice(0, 8);
+    let arrivalList = latest;
     const [featRes, arrivRes, catRes] = await Promise.allSettled([
-      api.get('/products', { params: { featured: 'true', limit: 8 } }),
-      api.get('/products', { params: { newArrival: 'true', limit: 8 } }),
+      api.get('/products', { params: { featured: 'true', limit: 24 } }),
+      api.get('/products', { params: { newArrival: 'true', limit: 48 } }),
       api.get('/categories')
     ]);
     if (featRes.status === 'fulfilled' && featRes.value.data?.products?.length) {
@@ -67,10 +69,34 @@ export default function Home() {
     };
 
     run();
+    const id = setInterval(async () => {
+      try {
+        const next = await loadCatalog();
+        if (!live) return;
+        setFeatured(next.featured);
+        setArrivals(next.arrivals);
+        setCats(next.cats);
+      } catch {
+        /* keep last good catalog */
+      }
+    }, 5000);
     return () => {
       live = false;
+      clearInterval(id);
     };
   }, []);
+
+  useEffect(() => {
+    if (arrivals.length < 2) return undefined;
+    const id = setInterval(() => {
+      setHeroIndex((i) => (i + 1) % arrivals.length);
+    }, 4500);
+    return () => clearInterval(id);
+  }, [arrivals.length]);
+
+  useEffect(() => {
+    setHeroIndex((i) => (arrivals.length ? Math.min(i, arrivals.length - 1) : 0));
+  }, [arrivals.length]);
 
   const subscribe = async (e) => {
     e.preventDefault();
@@ -99,21 +125,65 @@ export default function Home() {
         </div>
       ) : null}
       <section className="hero">
+        <div className="hero-media" aria-hidden={arrivals.length ? undefined : true}>
+          {arrivals.length ? (
+            arrivals.map((p, i) => {
+              const src = productCover(p);
+              return (
+                <div key={p._id} className={`hero-slide ${i === heroIndex ? 'is-active' : ''}`}>
+                  {src ? <img src={src} alt="" /> : <div className="hero-slide-fallback" />}
+                </div>
+              );
+            })
+          ) : (
+            <div className="hero-slide is-active hero-slide-fallback" />
+          )}
+        </div>
         <div className="container hero-copy">
-          <p className="eyebrow">Khalyx Empire</p>
+          <p className="eyebrow">Khalyx Empire · New arrivals</p>
           <h1>Gold. Black. Heritage.</h1>
-          <p>Footwear, traditional wear, streetwear and objects of desire — designed for the ones who move like they own the room.</p>
+          <p>
+            {arrivals[heroIndex]
+              ? `${arrivals[heroIndex].name} — and ${Math.max(0, arrivals.length - 1)} more just landed.`
+              : 'Footwear, traditional wear, streetwear and objects of desire — designed for the ones who move like they own the room.'}
+          </p>
           <div className="hero-actions">
-            <Link className="btn" to="/shop">
-              Shop the collection
-            </Link>
-            <Link className="btn ghost" to="/shop/traditional-wear">
-              Traditional wear
+            {arrivals[heroIndex] ? (
+              <Link className="btn" to={`/product/${arrivals[heroIndex].slug}`}>
+                View this piece
+              </Link>
+            ) : (
+              <Link className="btn" to="/shop">
+                Shop the collection
+              </Link>
+            )}
+            <Link className="btn ghost" to="/shop?newArrival=true">
+              All new arrivals
             </Link>
             <a className="btn dark" href={WHATSAPP_GROUP_URL} target="_blank" rel="noopener noreferrer">
               Join WhatsApp
             </a>
           </div>
+          {arrivals.length > 1 ? (
+            <div className="hero-thumbs" role="tablist" aria-label="New arrival products">
+              {arrivals.map((p, i) => {
+                const src = productCover(p);
+                return (
+                  <button
+                    key={p._id}
+                    type="button"
+                    role="tab"
+                    aria-selected={i === heroIndex}
+                    className={`hero-thumb ${i === heroIndex ? 'is-active' : ''}`}
+                    onClick={() => setHeroIndex(i)}
+                    title={p.name}
+                  >
+                    {src ? <img src={src} alt={p.name} /> : <span>{p.name.slice(0, 1)}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -150,9 +220,10 @@ export default function Home() {
         <div className="container">
           <div className="section-head">
             <h2>New arrivals</h2>
+            <Link to="/shop?newArrival=true">Shop all</Link>
           </div>
           <div className="grid">
-            {arrivals.length ? arrivals.map((p) => <ProductCard key={p._id} product={p} />) : null}
+            {arrivals.length ? arrivals.map((p) => <ProductCard key={p._id} product={p} />) : <p className="muted">No new arrivals flagged yet — mark products as New arrival in Admin.</p>}
           </div>
         </div>
       </section>

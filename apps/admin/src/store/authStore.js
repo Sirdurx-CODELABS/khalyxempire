@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { api, saveAdminToken, clearAdminToken } from '../api/client.js';
 
 function canUseAdmin(user) {
-  return Boolean(user?.apps?.includes('admin') || user?.role === 'admin');
+  return Boolean(user?.apps?.includes('admin'));
 }
 
 export const useAdminAuth = create((set, get) => ({
@@ -29,11 +29,18 @@ export const useAdminAuth = create((set, get) => ({
   async login(payload) {
     const { data } = await api.post('/auth/login', { ...payload, app: 'admin' });
     if (!canUseAdmin(data.user)) {
-      throw new Error('This account cannot sign in to the admin dashboard');
+      throw new Error('This account cannot sign in to the admin dashboard. Ask an admin to enable Admin Dashboard access.');
     }
     saveAdminToken(data.token);
-    set({ user: data.user });
+    set({ user: data.user, ready: true });
     return data.user;
+  },
+  acceptSession(data) {
+    if (!canUseAdmin(data.user)) {
+      throw new Error('This invite is not for the admin dashboard.');
+    }
+    saveAdminToken(data.token);
+    set({ user: data.user, ready: true });
   },
   async logout() {
     await api.post('/auth/logout').catch(() => {});

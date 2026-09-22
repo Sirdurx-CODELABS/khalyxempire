@@ -3,7 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import Field from '../components/Field.jsx';
 
-const emptyVariant = () => ({ size: '', color: '', price: '', stock: 10, compareAtPrice: 0, sku: '', barcode: '', lowStockThreshold: 5 });
+const emptyVariant = () => ({
+  size: '',
+  color: '',
+  price: '',
+  costPrice: '',
+  stock: 0,
+  compareAtPrice: 0,
+  sku: '',
+  barcode: '',
+  lowStockThreshold: 5
+});
 
 function upsertColorImages(list, color, urls, replace = false) {
   const key = color.trim();
@@ -20,9 +30,14 @@ function upsertColorImages(list, color, urls, replace = false) {
 
 export default function ProductForm() {
   const { id } = useParams();
+  const isNew = !id || id === 'new';
   const navigate = useNavigate();
   const [cats, setCats] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [imageColor, setImageColor] = useState('');
   const [form, setForm] = useState({
     name: '',
@@ -34,15 +49,19 @@ export default function ProductForm() {
     tags: '',
     featured: false,
     newArrival: false,
-    isActive: true,
+    status: 'active',
     seoTitle: '',
     seoDescription: '',
+    basePrice: '',
+    costPrice: '',
+    suppliers: [],
     variants: [emptyVariant()]
   });
 
   useEffect(() => {
     api.get('/categories').then(({ data }) => setCats(data.categories));
-    if (id && id !== 'new') {
+    api.get('/admin/products/meta/suppliers').then(({ data }) => setSuppliers(data.suppliers || [])).catch(() => {});
+    if (!isNew) {
       api.get(`/admin/products/${id}`).then(({ data }) => {
         const p = data.product;
         const colorImages = p.colorImages || [];
@@ -56,15 +75,18 @@ export default function ProductForm() {
           tags: (p.tags || []).join(', '),
           featured: p.featured,
           newArrival: p.newArrival,
-          isActive: p.isActive,
+          status: p.status === 'out_of_stock' ? 'active' : p.status || 'active',
           seoTitle: p.seoTitle || '',
           seoDescription: p.seoDescription || '',
-          variants: p.variants.length ? p.variants : [emptyVariant()]
+          basePrice: p.basePrice || p.variants?.[0]?.price || '',
+          costPrice: p.costPrice || p.variants?.[0]?.costPrice || '',
+          suppliers: (p.suppliers || []).map((s) => s._id || s),
+          variants: p.variants.length ? p.variants.map((v) => ({ ...v, price: v.price, costPrice: v.costPrice || '' })) : [emptyVariant()]
         });
         setImageColor(colorImages[0]?.color || p.variants.find((v) => v.color)?.color || '');
       });
     }
-  }, [id]);
+  }, [id, isNew]);
 
   const colors = useMemo(
     () => [...new Set(form.variants.map((v) => String(v.color || '').trim()).filter(Boolean))],
@@ -89,6 +111,13 @@ export default function ProductForm() {
     setForm({ ...form, variants });
   };
 
+  const toggleSupplier = (sid) => {
+    setForm((f) => ({
+      ...f,
+      suppliers: f.suppliers.includes(sid) ? f.suppliers.filter((id) => id !== sid) : [...f.suppliers, sid]
+    }));
+  };
+
   const uploadFiles = async (files) => {
     const body = new FormData();
     [...files].forEach((f) => body.append('images', f));
@@ -96,56 +125,68 @@ export default function ProductForm() {
     return data.urls || [];
   };
 
-  const upload = async (e) => {
-    const files = e.target.files;
+  const addImages = async (files) => {
     if (!files?.length) return;
     const urls = await uploadFiles(files);
     setForm((f) => ({ ...f, images: [...f.images, ...urls] }));
-    e.target.value = '';
   };
 
-  const uploadColor = async (e) => {
-    const files = e.target.files;
-    if (!files?.length || !imageColor) return;
-    const urls = await uploadFiles(files);
-    setForm((f) => ({ ...f, colorImages: upsertColorImages(f.colorImages, imageColor, urls) }));
-    e.target.value = '';
+  const moveImage = (from, to) => {
+    if (to < 0 || to >= form.images.length) return;
+    const images = [...form.images];
+    const [item] = images.splice(from, 1);
+    images.splice(to, 0, item);
+    setForm({ ...form, images });
   };
 
-  const removeColorImage = (src) => {
-    setForm((f) => ({
-      ...f,
-      colorImages: upsertColorImages(
-        f.colorImages,
-        imageColor,
-        (f.colorImages.find((c) => c.color === imageColor)?.images || []).filter((i) => i !== src),
-        true
-      )
-    }));
+  const validate = () => {
+    const next = {};
+    if (!form.name.trim()) next.name = 'Product name is required';
+    if (!form.category) next.category = 'Choose a category';
+    if (form.basePrice === '' || Number(form.basePrice) < 0) next.basePrice = 'Base price is required';
+    if (!form.variants.length) next.variants = 'Add at least one variant';
+    form.variants.forEach((v, i) => {
+      const price = v.price === '' || v.price === undefined ? form.basePrice : v.price;
+      if (price === '' || Number(price) < 0) next[`price-${i}`] = 'Price is required (or set a base price)';
+    });
+    setErrors(next);
+    return !Object.keys(next).length;
   };
 
   const save = async (e) => {
     e.preventDefault();
     setError('');
+    if (!validate()) {
+      setError('Fix the highlighted fields before saving.');
+      return;
+    }
+    setSaving(true);
     const payload = {
       ...form,
-      tags: form.tags
+      tags: String(form.tags)
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean),
       variants: form.variants.map((v) => ({
         ...v,
-        price: Number(v.price),
-        stock: Number(v.stock),
+        price: v.price === '' ? undefined : Number(v.price),
+        costPrice: v.costPrice === '' ? undefined : Number(v.costPrice),
+        stock: Number(v.stock) || 0,
         compareAtPrice: Number(v.compareAtPrice) || 0
       }))
     };
     try {
-      if (id && id !== 'new') await api.patch(`/admin/products/${id}`, payload);
-      else await api.post('/admin/products', payload);
-      navigate('/products');
+      if (!isNew) await api.patch(`/admin/products/${id}`, payload);
+      else {
+        const { data } = await api.post('/admin/products', payload);
+        navigate(`/products/${data.product._id}`);
+        return;
+      }
+      navigate(`/products/${id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Could not save product');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -155,22 +196,22 @@ export default function ProductForm() {
   return (
     <form className="form-grid" onSubmit={save}>
       <div className="page-head">
-        <h1>{id === 'new' || !id ? 'New product' : 'Edit product'}</h1>
-        <button className="btn" type="submit">
-          Save
+        <h1>{isNew ? 'New product' : 'Edit product'}</h1>
+        <button className="btn" type="submit" disabled={saving}>
+          {saving ? 'Saving…' : 'Save / Update'}
         </button>
       </div>
-      {error ? <p className="alert">{error}</p> : null}
+      {error ? <p className="field-error">{error}</p> : null}
       <div className="split wide" style={{ display: 'grid', gap: 16 }}>
         <div className="panel form-grid">
-          <Field label="Product name">
-            <input required placeholder="Heritage Tote" value={form.name} onChange={set('name')} />
+          <Field label="Product name" required error={errors.name}>
+            <input required value={form.name} onChange={set('name')} />
           </Field>
           <Field label="Description">
-            <textarea rows={5} placeholder="What the customer should know" value={form.description} onChange={set('description')} />
+            <textarea rows={5} value={form.description} onChange={set('description')} />
           </Field>
           <div className="form-row">
-            <Field label="Category">
+            <Field label="Category" required error={errors.category}>
               <select required value={form.category} onChange={set('category')}>
                 <option value="">Select category</option>
                 {cats.map((c) => (
@@ -189,14 +230,33 @@ export default function ProductForm() {
               </select>
             </Field>
           </div>
-          <Field label="Tags" hint="Comma separated">
-            <input placeholder="leather, tote, gold" value={form.tags} onChange={set('tags')} />
+          <div className="form-row">
+            <Field label="Base price (NGN)" required hint="Used when a variant price is left blank" error={errors.basePrice}>
+              <input type="number" min={0} required value={form.basePrice} onChange={set('basePrice')} />
+            </Field>
+            <Field label="Cost price (NGN)" hint="Default cost for new variants">
+              <input type="number" min={0} value={form.costPrice} onChange={set('costPrice')} />
+            </Field>
+          </div>
+          <Field label="Tags" hint="Comma separated — shoes, abayas, bags">
+            <input value={form.tags} onChange={set('tags')} />
           </Field>
-          <Field label="SEO title">
-            <input placeholder="Shown in search results" value={form.seoTitle} onChange={set('seoTitle')} />
+          <Field label="Status" required>
+            <select value={form.status} onChange={set('status')}>
+              <option value="active">Active</option>
+              <option value="draft">Draft</option>
+            </select>
           </Field>
-          <Field label="SEO description">
-            <textarea placeholder="Short summary for Google" value={form.seoDescription} onChange={set('seoDescription')} />
+          <Field label="Suppliers" hint="A product can come from more than one supplier">
+            <div className="multi-select">
+              {suppliers.length === 0 ? <span className="muted">No suppliers yet.</span> : null}
+              {suppliers.map((s) => (
+                <label key={s._id}>
+                  <input type="checkbox" checked={form.suppliers.includes(s._id)} onChange={() => toggleSupplier(s._id)} /> {s.name}{' '}
+                  <span className={`badge ${s.status}`}>{s.status}</span>
+                </label>
+              ))}
+            </div>
           </Field>
           <label className="check">
             <input type="checkbox" checked={form.featured} onChange={set('featured')} /> Featured
@@ -204,40 +264,46 @@ export default function ProductForm() {
           <label className="check">
             <input type="checkbox" checked={form.newArrival} onChange={set('newArrival')} /> New arrival
           </label>
-          <label className="check">
-            <input type="checkbox" checked={form.isActive} onChange={set('isActive')} /> Active
-          </label>
         </div>
         <div className="panel form-grid">
-          <h3>Default gallery</h3>
-          <Field label="Upload images" hint="Used when a colour has no photos of its own">
-            <input type="file" accept="image/*" multiple onChange={upload} />
-          </Field>
-          {form.images.map((src) => (
-            <div key={src} className="image-row">
-              <img className="thumb" src={src} alt="" />
-              <button
-                type="button"
-                className="btn small ghost"
-                onClick={() => setForm({ ...form, images: form.images.filter((i) => i !== src) })}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-          <Field label="Or paste image URL">
-            <input
-              placeholder="https://…"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const url = e.target.value.trim();
-                  if (url) setForm({ ...form, images: [...form.images, url] });
-                  e.target.value = '';
-                }
-              }}
-            />
-          </Field>
+          <h3>Images</h3>
+          <div
+            className={`gallery-drop ${dragOver ? 'over' : ''}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              addImages(e.dataTransfer.files);
+            }}
+          >
+            Drag and drop images here, or
+            <Field label="Upload images">
+              <input type="file" accept="image/*" multiple onChange={(e) => addImages(e.target.files)} />
+            </Field>
+          </div>
+          <div className="gallery-list">
+            {form.images.map((src, i) => (
+              <div key={src} className={`gallery-item ${i === 0 ? 'is-primary' : ''}`}>
+                <img src={src} alt="" />
+                <button className="btn small ghost" type="button" onClick={() => setForm({ ...form, images: [src, ...form.images.filter((x) => x !== src)] })}>
+                  Primary
+                </button>
+                <button className="btn small ghost" type="button" onClick={() => moveImage(i, i - 1)}>
+                  ←
+                </button>
+                <button className="btn small ghost" type="button" onClick={() => moveImage(i, i + 1)}>
+                  →
+                </button>
+                <button className="btn small danger" type="button" onClick={() => setForm({ ...form, images: form.images.filter((x) => x !== src) })}>
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       <div className="panel">
@@ -247,16 +313,17 @@ export default function ProductForm() {
             Add variant
           </button>
         </div>
+        {errors.variants ? <p className="field-error">{errors.variants}</p> : null}
         <div className="table-wrap">
           <table className="data">
             <thead>
               <tr>
                 <th>Size</th>
                 <th>Colour</th>
-                <th>Price</th>
-                <th>Compare</th>
-                <th>Stock</th>
                 <th>SKU</th>
+                <th>Stock</th>
+                <th>Price override</th>
+                <th>Cost</th>
                 <th></th>
               </tr>
             </thead>
@@ -265,37 +332,37 @@ export default function ProductForm() {
                 <tr key={v._id || i}>
                   <td>
                     <Field label="Size">
-                      <input value={v.size} onChange={(e) => setVariant(i, 'size', e.target.value)} placeholder="OS" />
+                      <input value={v.size} onChange={(e) => setVariant(i, 'size', e.target.value)} />
                     </Field>
                   </td>
                   <td>
                     <Field label="Colour">
-                      <input value={v.color} onChange={(e) => setVariant(i, 'color', e.target.value)} placeholder="Black" />
-                    </Field>
-                  </td>
-                  <td>
-                    <Field label="Price (NGN)">
-                      <input type="number" value={v.price} onChange={(e) => setVariant(i, 'price', e.target.value)} />
-                    </Field>
-                  </td>
-                  <td>
-                    <Field label="Compare at">
-                      <input type="number" value={v.compareAtPrice} onChange={(e) => setVariant(i, 'compareAtPrice', e.target.value)} />
-                    </Field>
-                  </td>
-                  <td>
-                    <Field label="Stock">
-                      <input type="number" value={v.stock} onChange={(e) => setVariant(i, 'stock', e.target.value)} />
+                      <input value={v.color} onChange={(e) => setVariant(i, 'color', e.target.value)} />
                     </Field>
                   </td>
                   <td>
                     <Field label="SKU">
-                      <input value={v.sku} onChange={(e) => setVariant(i, 'sku', e.target.value)} placeholder="auto" />
+                      <input value={v.sku} onChange={(e) => setVariant(i, 'sku', e.target.value)} />
+                    </Field>
+                  </td>
+                  <td>
+                    <Field label="Stock" required>
+                      <input type="number" value={v.stock} onChange={(e) => setVariant(i, 'stock', e.target.value)} />
+                    </Field>
+                  </td>
+                  <td>
+                    <Field label="Price" hint="Blank = base price" error={errors[`price-${i}`]}>
+                      <input type="number" value={v.price} onChange={(e) => setVariant(i, 'price', e.target.value)} />
+                    </Field>
+                  </td>
+                  <td>
+                    <Field label="Cost">
+                      <input type="number" value={v.costPrice} onChange={(e) => setVariant(i, 'costPrice', e.target.value)} />
                     </Field>
                   </td>
                   <td>
                     <button className="btn small danger" type="button" onClick={() => setForm({ ...form, variants: form.variants.filter((_, idx) => idx !== i) })}>
-                      ×
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -303,11 +370,10 @@ export default function ProductForm() {
             </tbody>
           </table>
         </div>
-        <div className="color-images">
+        <div className="color-images" style={{ marginTop: 16 }}>
           <h3>Images by colour</h3>
-          <p className="muted">Add colours on the variants above, then choose a colour and upload photos for it. Shoppers see those photos when they pick that colour.</p>
           {colors.length === 0 ? (
-            <p className="muted">No colours yet. Type a colour on a variant first.</p>
+            <p className="muted">Type a colour on a variant first.</p>
           ) : (
             <div className="form-grid">
               <Field label="Select colour">
@@ -320,13 +386,39 @@ export default function ProductForm() {
                 </select>
               </Field>
               <Field label={`Upload images for ${imageColor || 'this colour'}`}>
-                <input type="file" accept="image/*" multiple disabled={!imageColor} onChange={uploadColor} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={!imageColor}
+                  onChange={async (e) => {
+                    const files = e.target.files;
+                    if (!files?.length || !imageColor) return;
+                    const urls = await uploadFiles(files);
+                    setForm((f) => ({ ...f, colorImages: upsertColorImages(f.colorImages, imageColor, urls) }));
+                    e.target.value = '';
+                  }}
+                />
               </Field>
-              <div className="image-grid">
+              <div className="gallery-list">
                 {selectedColorImages.map((src) => (
-                  <div key={src} className="image-row">
-                    <img className="thumb" src={src} alt={imageColor} />
-                    <button type="button" className="btn small ghost" onClick={() => removeColorImage(src)}>
+                  <div key={src} className="gallery-item">
+                    <img src={src} alt={imageColor} />
+                    <button
+                      type="button"
+                      className="btn small ghost"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          colorImages: upsertColorImages(
+                            f.colorImages,
+                            imageColor,
+                            (f.colorImages.find((c) => c.color === imageColor)?.images || []).filter((i) => i !== src),
+                            true
+                          )
+                        }))
+                      }
+                    >
                       Remove
                     </button>
                   </div>

@@ -1,0 +1,12 @@
+{
+  "name": "@khalyx/auth-ui",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.jsx",
+  "exports": {
+    ".": "./src/index.jsx"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}

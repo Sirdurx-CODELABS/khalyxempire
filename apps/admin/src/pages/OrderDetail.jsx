@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { DataTable } from '@khalyx/ui';
 import { api, money, downloadFile } from '../api/client.js';
 
 export default function OrderDetail() {
@@ -53,7 +54,7 @@ export default function OrderDetail() {
         </p>
         <p>
           Status: <span className={`badge ${order.status}`}>{order.status}</span> · Channel {order.channel} ·{' '}
-          {order.payment?.provider}
+          {order.payment?.provider} {order.soldBy?.name ? `· sold by ${order.soldBy.name}` : ''}
         </p>
         <div className="toolbar no-print">
           {['processing', 'shipped', 'delivered', 'cancelled'].map((s) => (
@@ -61,31 +62,36 @@ export default function OrderDetail() {
               Mark {s}
             </button>
           ))}
+          <button
+            className="btn small danger"
+            type="button"
+            onClick={() =>
+              api.patch(`/admin/orders/${orderNumber}`, { refund: true, note: 'Admin refund' }).then(({ data }) => setOrder(data.order))
+            }
+          >
+            Refund
+          </button>
         </div>
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Qty</th>
-              <th>Price</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items.map((i) => (
-              <tr key={i.sku}>
-                <td>
-                  {i.name} {i.size} {i.color}
-                </td>
-                <td>{i.qty}</td>
-                <td>{money(i.price)}</td>
-                <td>{money(i.price * i.qty)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          rows={order.items || []}
+          rowKey={(i) => i.sku || i.variantId || i.name}
+          searchKeys={['name', 'sku', 'size', 'color']}
+          columns={[
+            { id: 'name', header: 'Item', accessor: (i) => `${i.name} ${i.size || ''} ${i.color || ''}`.trim() },
+            { id: 'qty', header: 'Qty', accessor: (i) => i.qty },
+            { id: 'price', header: 'Price', accessor: (i) => i.price, cell: (i) => money(i.price) },
+            { id: 'total', header: 'Total', accessor: (i) => i.price * i.qty, cell: (i) => money(i.price * i.qty) }
+          ]}
+        />
         <p>
-          Subtotal {money(order.subtotal)} · Discount {money(order.discount)} · Shipping {money(order.shippingFee)}
+          Subtotal {money(order.subtotal)}
+          {(order.discountBreakdown || []).map((row) => (
+            <span key={row.label}>
+              {' '}
+              · {row.label} -{money(row.amount)}
+            </span>
+          ))}
+          {!(order.discountBreakdown || []).length ? ` · Discount ${money(order.discount)}` : null} · Shipping {money(order.shippingFee)}
         </p>
         <h2>Total {money(order.total)}</h2>
       </div>
